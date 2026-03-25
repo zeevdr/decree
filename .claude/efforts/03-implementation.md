@@ -36,7 +36,7 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] Config writes (SetField, SetFields) with optimistic concurrency (checksum), field lock enforcement, audit logging, cache invalidation, pub/sub change events
 - [x] Config versioning (ListVersions, GetVersion, RollbackToVersion — creates new version with target's values)
 - [x] gRPC streaming subscriptions (Subscribe with field path filtering via Redis Pub/Sub)
-- [ ] Config import/export (YAML) — stubbed as unimplemented
+- [x] Config import/export (YAML) — typed values (int→YAML int, bool→YAML bool, json→YAML map), schema-aware conversion, atomic import with audit
 - [ ] Usage stats recording (async, batched) — deferred to AuditService
 - [x] Store interface with PostgreSQL implementation (read/write pool routing)
 
@@ -47,10 +47,12 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] Store interface with PostgreSQL implementation (read/write pool routing)
 - [x] UpsertUsageStats available for future batched read tracking
 
-### Unit Tests (in progress)
+### Unit Tests (completed)
 
 - [x] Schema service tests — CreateSchema, GetSchema (latest/specific), UpdateSchema (versioning), PublishSchema, CreateTenant (requires published schema)
-- [x] Config service tests — GetConfig (cache hit/miss, include_descriptions bypass), SetField (success, checksum mismatch, locked field), GetField (not found), RollbackToVersion
+- [x] Schema YAML tests — roundtrip conversion, type mapping, constraint mapping (OAS↔proto), validation (6 cases), slug validation (6 invalid patterns)
+- [x] Config service tests — GetConfig (cache hit/miss, include_descriptions bypass), SetField (success, checksum mismatch, locked field), GetField (not found), RollbackToVersion, ExportConfig, ImportConfig
+- [x] Config YAML tests — roundtrip (6 types), typed value conversion, stringify value, validation (4 cases), description preservation
 - [x] Convert helper tests — UUID roundtrip, checksum determinism/order-independence, field type roundtrip, ptrString
 - [x] Mock stores using testify/mock for schema, config, cache, pubsub
 - [x] `auth.ContextWithClaims()` helper for injecting claims in tests
@@ -59,7 +61,9 @@ Core infrastructure — everything needed before implementing business logic.
 ### Phase 5: Polish
 
 - [ ] Helm chart
-- [x] E2E tests — docker-compose stack (PG + Redis + migrate + service), 4 test suites: schema lifecycle, full flow (schema→tenant→config→lock→audit), streaming subscription, error cases
+- [x] E2E tests — docker-compose stack (PG + Redis + migrate + service), 6 test suites: schema lifecycle, full flow (schema→tenant→config→lock→audit), streaming subscription, error cases, schema export/import, config export/import
+- [x] Lint cleanup — all golangci-lint issues fixed (errcheck, gofumpt, staticcheck, gocritic, unparam)
+- [x] Proto documentation — comprehensive field-level comments across all 4 proto files (slug formats, value encoding, import semantics, concurrency, caching, versioning, locks, pagination, cascades)
 - [ ] OpenTelemetry integration (tracing + custom metrics)
 - [ ] CI (GitHub Actions)
 
@@ -74,3 +78,8 @@ Core infrastructure — everything needed before implementing business logic.
 5. **keyfunc v3** — uses context cancellation (not `End()`) for cleanup
 6. **Makefile sentinel caching** — tools image only rebuilds when Dockerfile.tools changes; generate and lint-proto run in single containers
 7. **Atomic config writes + audit** — `Store.RunInTx` callback wraps CreateConfigVersion + SetConfigValue + InsertAuditWriteLog in a single DB transaction. Side effects (cache invalidation, pub/sub) happen after commit. Audit failures now roll back the entire write (previously fire-and-forget).
+8. **Slug names** — schema and tenant names enforced as slugs (`[a-z0-9]([a-z0-9-]*[a-z0-9])?`, 1-63 chars) at all entry points (CreateSchema, CreateTenant, UpdateTenant, YAML import)
+9. **Schema YAML format** — syntax v1 with OAS-style constraint naming (minimum/maximum/pattern/enum). Import uses full-replace semantics with checksum dedup. Version in YAML is informational; server assigns next version.
+10. **Field type system** — OAS-aligned: `integer` (INT), `number` (float), `string`, `bool`, `time`, `duration`, `url`, `json`. DB uses PG enum. Constraints min/max are `double` to support float ranges.
+11. **Config YAML typed values** — export converts string values to native YAML types (int→number, bool→boolean, json→map) using schema field type info. Import reverses the conversion. Both directions require schema lookup.
+12. **Lint zero issues** — fixed all pre-existing golangci-lint issues; gofumpt moved from linters to formatters-only in `.golangci.yml`.
