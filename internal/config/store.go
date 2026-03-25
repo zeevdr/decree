@@ -10,6 +10,11 @@ import (
 
 // Store defines the data access interface for config operations.
 type Store interface {
+	// RunInTx executes fn within a database transaction.
+	// The Store passed to fn is bound to the transaction.
+	// If fn returns nil the transaction is committed; otherwise it is rolled back.
+	RunInTx(ctx context.Context, fn func(Store) error) error
+
 	// Config versions.
 	CreateConfigVersion(ctx context.Context, arg dbstore.CreateConfigVersionParams) (dbstore.ConfigVersion, error)
 	GetConfigVersion(ctx context.Context, arg dbstore.GetConfigVersionParams) (dbstore.ConfigVersion, error)

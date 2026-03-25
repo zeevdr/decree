@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,16 +12,39 @@ import (
 
 // PGStore implements Store using PostgreSQL via sqlc-generated queries.
 type PGStore struct {
-	write *dbstore.Queries
-	read  *dbstore.Queries
+	writePool *pgxpool.Pool
+	write     *dbstore.Queries
+	read      *dbstore.Queries
 }
 
 // NewPGStore creates a new PostgreSQL-backed config store.
 func NewPGStore(writePool, readPool *pgxpool.Pool) *PGStore {
 	return &PGStore{
-		write: dbstore.New(writePool),
-		read:  dbstore.New(readPool),
+		writePool: writePool,
+		write:     dbstore.New(writePool),
+		read:      dbstore.New(readPool),
 	}
+}
+
+// RunInTx executes fn within a database transaction.
+func (s *PGStore) RunInTx(ctx context.Context, fn func(Store) error) error {
+	tx, err := s.writePool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) // no-op after commit
+
+	txStore := &PGStore{
+		writePool: s.writePool,
+		write:     s.write.WithTx(tx),
+		read:      s.read,
+	}
+
+	if err := fn(txStore); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 // Config versions.

@@ -59,7 +59,7 @@ Core infrastructure — everything needed before implementing business logic.
 ### Phase 5: Polish
 
 - [ ] Helm chart
-- [ ] E2E tests
+- [x] E2E tests — docker-compose stack (PG + Redis + migrate + service), 4 test suites: schema lifecycle, full flow (schema→tenant→config→lock→audit), streaming subscription, error cases
 - [ ] OpenTelemetry integration (tracing + custom metrics)
 - [ ] CI (GitHub Actions)
 
@@ -73,3 +73,4 @@ Core infrastructure — everything needed before implementing business logic.
 4. **Context-aware logging** — `slog.*Context()` everywhere for future OTel trace ID correlation
 5. **keyfunc v3** — uses context cancellation (not `End()`) for cleanup
 6. **Makefile sentinel caching** — tools image only rebuilds when Dockerfile.tools changes; generate and lint-proto run in single containers
+7. **Atomic config writes + audit** — `Store.RunInTx` callback wraps CreateConfigVersion + SetConfigValue + InsertAuditWriteLog in a single DB transaction. Side effects (cache invalidation, pub/sub) happen after commit. Audit failures now roll back the entire write (previously fire-and-forget).

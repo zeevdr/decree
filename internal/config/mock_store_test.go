@@ -13,6 +13,10 @@ type mockStore struct {
 	mock.Mock
 }
 
+func (m *mockStore) RunInTx(_ context.Context, fn func(Store) error) error {
+	return fn(m)
+}
+
 func (m *mockStore) CreateConfigVersion(ctx context.Context, arg dbstore.CreateConfigVersionParams) (dbstore.ConfigVersion, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).(dbstore.ConfigVersion), args.Error(1)

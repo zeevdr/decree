@@ -194,60 +194,64 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 
 	actor := s.getActor(ctx)
 
-	// Optimistic concurrency check.
+	// Pre-transaction validation (reads only).
 	if req.ExpectedChecksum != nil {
 		if err := s.checkChecksum(ctx, tenantID, req.FieldPath, *req.ExpectedChecksum); err != nil {
 			return nil, err
 		}
 	}
-
-	// Check field locks.
 	if err := s.checkFieldLock(ctx, tenantID, req.FieldPath); err != nil {
 		return nil, err
 	}
 
-	// Get latest version to derive from.
 	latestVersion, err := s.getOrCreateVersion(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
-
-	// Get old value for audit.
 	oldValue := s.getCurrentValue(ctx, tenantID, req.FieldPath, latestVersion)
 
-	// Create new config version.
-	newVersion, err := s.store.CreateConfigVersion(ctx, dbstore.CreateConfigVersionParams{
-		TenantID:    tenantID,
-		Version:     latestVersion + 1,
-		Description: ptrString(req.GetDescription()),
-		CreatedBy:   actor,
-	})
-	if err != nil {
-		s.logger.ErrorContext(ctx, "create config version", "error", err)
-		return nil, status.Error(codes.Internal, "failed to create config version")
-	}
+	// Transaction: version + value + audit.
+	var newVersion dbstore.ConfigVersion
+	if err := s.store.RunInTx(ctx, func(tx Store) error {
+		var txErr error
+		newVersion, txErr = tx.CreateConfigVersion(ctx, dbstore.CreateConfigVersionParams{
+			TenantID:    tenantID,
+			Version:     latestVersion + 1,
+			Description: ptrString(req.GetDescription()),
+			CreatedBy:   actor,
+		})
+		if txErr != nil {
+			return fmt.Errorf("create config version: %w", txErr)
+		}
 
-	// Set the value.
-	if err := s.store.SetConfigValue(ctx, dbstore.SetConfigValueParams{
-		ConfigVersionID: newVersion.ID,
-		FieldPath:       req.FieldPath,
-		Value:           req.Value,
-		Description:     ptrString(req.GetValueDescription()),
+		if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
+			ConfigVersionID: newVersion.ID,
+			FieldPath:       req.FieldPath,
+			Value:           req.Value,
+			Description:     ptrString(req.GetValueDescription()),
+		}); txErr != nil {
+			return fmt.Errorf("set config value: %w", txErr)
+		}
+
+		return tx.InsertAuditWriteLog(ctx, dbstore.InsertAuditWriteLogParams{
+			TenantID:      tenantID,
+			Actor:         actor,
+			Action:        "set_field",
+			FieldPath:     ptrString(req.FieldPath),
+			OldValue:      ptrString(oldValue),
+			NewValue:      ptrString(req.Value),
+			ConfigVersion: &newVersion.Version,
+		})
 	}); err != nil {
-		s.logger.ErrorContext(ctx, "set config value", "error", err)
-		return nil, status.Error(codes.Internal, "failed to set config value")
+		s.logger.ErrorContext(ctx, "set field transaction failed", "error", err)
+		return nil, status.Error(codes.Internal, "failed to set field")
 	}
 
-	// Invalidate cache.
+	// Post-transaction side effects.
 	if err := s.cache.Invalidate(ctx, req.TenantId); err != nil {
 		s.logger.WarnContext(ctx, "failed to invalidate cache", "error", err)
 	}
-
-	// Publish change event.
 	s.publishChange(ctx, req.TenantId, newVersion.Version, req.FieldPath, oldValue, req.Value, actor)
-
-	// Audit log.
-	s.auditWrite(ctx, tenantID, actor, "set_field", req.FieldPath, oldValue, req.Value, newVersion.Version)
 
 	return &pb.SetFieldResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
 }
@@ -260,7 +264,7 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 
 	actor := s.getActor(ctx)
 
-	// Check all checksums and locks first.
+	// Pre-transaction validation (reads only).
 	for _, update := range req.Updates {
 		if update.ExpectedChecksum != nil {
 			if err := s.checkChecksum(ctx, tenantID, update.FieldPath, *update.ExpectedChecksum); err != nil {
@@ -277,39 +281,70 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 		return nil, err
 	}
 
-	// Create new config version.
-	newVersion, err := s.store.CreateConfigVersion(ctx, dbstore.CreateConfigVersionParams{
-		TenantID:    tenantID,
-		Version:     latestVersion + 1,
-		Description: ptrString(req.GetDescription()),
-		CreatedBy:   actor,
-	})
-	if err != nil {
-		s.logger.ErrorContext(ctx, "create config version", "error", err)
-		return nil, status.Error(codes.Internal, "failed to create config version")
+	// Collect old values for audit and change events.
+	type changeRecord struct {
+		fieldPath string
+		oldValue  string
+		newValue  string
+	}
+	changes := make([]changeRecord, 0, len(req.Updates))
+	for _, update := range req.Updates {
+		changes = append(changes, changeRecord{
+			fieldPath: update.FieldPath,
+			oldValue:  s.getCurrentValue(ctx, tenantID, update.FieldPath, latestVersion),
+			newValue:  update.Value,
+		})
 	}
 
-	// Set all values and audit each.
-	for _, update := range req.Updates {
-		oldValue := s.getCurrentValue(ctx, tenantID, update.FieldPath, latestVersion)
-
-		if err := s.store.SetConfigValue(ctx, dbstore.SetConfigValueParams{
-			ConfigVersionID: newVersion.ID,
-			FieldPath:       update.FieldPath,
-			Value:           update.Value,
-			Description:     ptrString(update.GetValueDescription()),
-		}); err != nil {
-			s.logger.ErrorContext(ctx, "set config value", "field", update.FieldPath, "error", err)
-			return nil, status.Errorf(codes.Internal, "failed to set field %s", update.FieldPath)
+	// Transaction: version + all values + all audit entries.
+	var newVersion dbstore.ConfigVersion
+	if err := s.store.RunInTx(ctx, func(tx Store) error {
+		var txErr error
+		newVersion, txErr = tx.CreateConfigVersion(ctx, dbstore.CreateConfigVersionParams{
+			TenantID:    tenantID,
+			Version:     latestVersion + 1,
+			Description: ptrString(req.GetDescription()),
+			CreatedBy:   actor,
+		})
+		if txErr != nil {
+			return fmt.Errorf("create config version: %w", txErr)
 		}
 
-		s.publishChange(ctx, req.TenantId, newVersion.Version, update.FieldPath, oldValue, update.Value, actor)
-		s.auditWrite(ctx, tenantID, actor, "set_field", update.FieldPath, oldValue, update.Value, newVersion.Version)
+		for i, update := range req.Updates {
+			if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
+				ConfigVersionID: newVersion.ID,
+				FieldPath:       update.FieldPath,
+				Value:           update.Value,
+				Description:     ptrString(update.GetValueDescription()),
+			}); txErr != nil {
+				return fmt.Errorf("set config value %s: %w", update.FieldPath, txErr)
+			}
+
+			if txErr = tx.InsertAuditWriteLog(ctx, dbstore.InsertAuditWriteLogParams{
+				TenantID:      tenantID,
+				Actor:         actor,
+				Action:        "set_field",
+				FieldPath:     ptrString(update.FieldPath),
+				OldValue:      ptrString(changes[i].oldValue),
+				NewValue:      ptrString(update.Value),
+				ConfigVersion: &newVersion.Version,
+			}); txErr != nil {
+				return fmt.Errorf("insert audit log for %s: %w", update.FieldPath, txErr)
+			}
+		}
+
+		return nil
+	}); err != nil {
+		s.logger.ErrorContext(ctx, "set fields transaction failed", "error", err)
+		return nil, status.Error(codes.Internal, "failed to set fields")
 	}
 
-	// Invalidate cache.
+	// Post-transaction side effects.
 	if err := s.cache.Invalidate(ctx, req.TenantId); err != nil {
 		s.logger.WarnContext(ctx, "failed to invalidate cache", "error", err)
+	}
+	for _, ch := range changes {
+		s.publishChange(ctx, req.TenantId, newVersion.Version, ch.fieldPath, ch.oldValue, ch.newValue, actor)
 	}
 
 	return &pb.SetFieldsResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
@@ -373,7 +408,7 @@ func (s *Service) RollbackToVersion(ctx context.Context, req *pb.RollbackToVersi
 
 	actor := s.getActor(ctx)
 
-	// Get the target version's full config.
+	// Pre-transaction reads.
 	targetRows, err := s.store.GetFullConfigAtVersion(ctx, dbstore.GetFullConfigAtVersionParams{
 		TenantID: tenantID,
 		Version:  req.Version,
@@ -385,46 +420,60 @@ func (s *Service) RollbackToVersion(ctx context.Context, req *pb.RollbackToVersi
 		return nil, status.Error(codes.NotFound, "target version not found or empty")
 	}
 
-	// Get latest version number.
 	latest, err := s.store.GetLatestConfigVersion(ctx, tenantID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get latest version")
 	}
 
-	// Create new version as rollback.
 	desc := fmt.Sprintf("Rollback to version %d", req.Version)
 	if req.Description != nil {
 		desc = *req.Description
 	}
-	newVersion, err := s.store.CreateConfigVersion(ctx, dbstore.CreateConfigVersionParams{
-		TenantID:    tenantID,
-		Version:     latest.Version + 1,
-		Description: &desc,
-		CreatedBy:   actor,
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to create rollback version")
-	}
 
-	// Copy all values from target version.
-	for _, row := range targetRows {
-		if err := s.store.SetConfigValue(ctx, dbstore.SetConfigValueParams{
-			ConfigVersionID: newVersion.ID,
-			FieldPath:       row.FieldPath,
-			Value:           row.Value,
-			Description:     row.Description,
-		}); err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to copy field %s", row.FieldPath)
+	// Transaction: new version + copied values + audit.
+	var newVersion dbstore.ConfigVersion
+	if err := s.store.RunInTx(ctx, func(tx Store) error {
+		var txErr error
+		newVersion, txErr = tx.CreateConfigVersion(ctx, dbstore.CreateConfigVersionParams{
+			TenantID:    tenantID,
+			Version:     latest.Version + 1,
+			Description: &desc,
+			CreatedBy:   actor,
+		})
+		if txErr != nil {
+			return fmt.Errorf("create rollback version: %w", txErr)
 		}
+
+		for _, row := range targetRows {
+			if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
+				ConfigVersionID: newVersion.ID,
+				FieldPath:       row.FieldPath,
+				Value:           row.Value,
+				Description:     row.Description,
+			}); txErr != nil {
+				return fmt.Errorf("copy field %s: %w", row.FieldPath, txErr)
+			}
+		}
+
+		newValue := fmt.Sprintf("v%d", req.Version)
+		return tx.InsertAuditWriteLog(ctx, dbstore.InsertAuditWriteLogParams{
+			TenantID:      tenantID,
+			Actor:         actor,
+			Action:        "rollback",
+			FieldPath:     ptrString(""),
+			OldValue:      ptrString(""),
+			NewValue:      &newValue,
+			ConfigVersion: &newVersion.Version,
+		})
+	}); err != nil {
+		s.logger.ErrorContext(ctx, "rollback transaction failed", "error", err)
+		return nil, status.Error(codes.Internal, "failed to rollback")
 	}
 
-	// Invalidate cache.
+	// Post-transaction side effects.
 	if err := s.cache.Invalidate(ctx, req.TenantId); err != nil {
 		s.logger.WarnContext(ctx, "failed to invalidate cache", "error", err)
 	}
-
-	// Audit.
-	s.auditWrite(ctx, tenantID, actor, "rollback", "", "", fmt.Sprintf("v%d", req.Version), newVersion.Version)
 
 	return &pb.RollbackToVersionResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
 }
@@ -597,16 +646,3 @@ func (s *Service) publishChange(ctx context.Context, tenantID string, version in
 	}
 }
 
-func (s *Service) auditWrite(ctx context.Context, tenantID pgtype.UUID, actor, action, fieldPath, oldValue, newValue string, version int32) {
-	if err := s.store.InsertAuditWriteLog(ctx, dbstore.InsertAuditWriteLogParams{
-		TenantID:      tenantID,
-		Actor:         actor,
-		Action:        action,
-		FieldPath:     ptrString(fieldPath),
-		OldValue:      ptrString(oldValue),
-		NewValue:      ptrString(newValue),
-		ConfigVersion: &version,
-	}); err != nil {
-		s.logger.WarnContext(ctx, "failed to write audit log", "error", err)
-	}
-}
