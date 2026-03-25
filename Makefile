@@ -1,25 +1,29 @@
 BINARY_NAME := central-config-service
 BUILD_DIR := bin
 TOOLS_IMAGE := central-config-tools
+TOOLS_SENTINEL := .tools-image-built
 DOCKER_RUN_TOOLS := docker run --rm -u $(shell id -u):$(shell id -g) -e HOME=/tmp -v $(CURDIR):/workspace -w /workspace $(TOOLS_IMAGE)
 
-.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e clean tools
+.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e clean tools help
 
 all: generate lint test build
 
-## tools: Build the tools Docker image
-tools:
+## tools: Build the tools Docker image (only when Dockerfile.tools changes)
+tools: $(TOOLS_SENTINEL)
+$(TOOLS_SENTINEL): build/Dockerfile.tools
 	docker build -t $(TOOLS_IMAGE) -f build/Dockerfile.tools .
+	@touch $(TOOLS_SENTINEL)
 
 ## generate: Generate code from protobuf and SQL specs
-generate: generate-proto generate-sqlc
+generate: $(TOOLS_SENTINEL)
+	$(DOCKER_RUN_TOOLS) sh -c 'buf generate && cd db && sqlc generate'
 
 ## generate-proto: Generate Go code from protobuf definitions
-generate-proto: tools
+generate-proto: $(TOOLS_SENTINEL)
 	$(DOCKER_RUN_TOOLS) buf generate
 
 ## generate-sqlc: Generate Go code from SQL queries
-generate-sqlc: tools
+generate-sqlc: $(TOOLS_SENTINEL)
 	$(DOCKER_RUN_TOOLS) bash -c "cd db && sqlc generate"
 
 ## test: Run unit tests
@@ -34,9 +38,8 @@ lint-go:
 	golangci-lint run ./...
 
 ## lint-proto: Run protobuf linter and breaking change detection
-lint-proto: tools
-	$(DOCKER_RUN_TOOLS) buf lint
-	$(DOCKER_RUN_TOOLS) buf breaking --against '.git#branch=main'
+lint-proto: $(TOOLS_SENTINEL)
+	$(DOCKER_RUN_TOOLS) sh -c 'buf lint && buf breaking --against ".git#branch=main"'
 
 ## build: Build the service binary
 build:
@@ -47,11 +50,11 @@ image:
 	docker build -t $(BINARY_NAME) -f build/Dockerfile .
 
 ## migrate: Run database migrations
-migrate: tools
+migrate: $(TOOLS_SENTINEL)
 	$(DOCKER_RUN_TOOLS) goose -dir db/migrations postgres "$${DB_WRITE_URL:-postgres://centralconfig:localdev@localhost:5432/centralconfig?sslmode=disable}" up
 
 ## migrate-down: Roll back the last migration
-migrate-down: tools
+migrate-down: $(TOOLS_SENTINEL)
 	$(DOCKER_RUN_TOOLS) goose -dir db/migrations postgres "$${DB_WRITE_URL:-postgres://centralconfig:localdev@localhost:5432/centralconfig?sslmode=disable}" down
 
 ## e2e: Run end-to-end tests
@@ -69,7 +72,7 @@ e2e:
 ## clean: Remove build artifacts and generated code
 clean:
 	rm -rf $(BUILD_DIR)
-	$(DOCKER_RUN_TOOLS) rm -rf gen/ internal/storage/dbstore/
+	$(DOCKER_RUN_TOOLS) rm -rf api/centralconfig/ internal/storage/dbstore/
 
 ## help: Show this help
 help:

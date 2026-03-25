@@ -30,6 +30,9 @@ coverage.html
 # Docker
 docker-compose.override.yml
 
+# Make
+.tools-image-built
+
 # OS
 .DS_Store
 Thumbs.db

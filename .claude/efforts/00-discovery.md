@@ -14,6 +14,7 @@ Document the discovery and design process for the Central Config Service project
 - [x] System design — architecture, components, data flow → [01-system-design.md](01-system-design.md)
 - [x] Project structure — directory layout, modules → [02-project-structure.md](02-project-structure.md)
 - [x] Documentation — README for users and developers
+- [x] Implementation — server wiring, services → [03-implementation.md](03-implementation.md)
 
 ---
 

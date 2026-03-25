@@ -262,6 +262,22 @@ Validation is applied on every write, based on the field definition in the schem
 - **Nullable**: each field has a `nullable` flag. If false, null/empty writes are rejected.
 - **JSON schema**: for `json`-typed fields, an optional JSON Schema can be provided in the field constraints. The value is validated against it on write.
 
+### Validator Factory (planned)
+
+A `ValidatorFactory` compiles and caches validators per schema version:
+
+```
+ValidatorFactory
+├── GetValidator(schemaID, version, fieldPath) → FieldValidator (cached)
+├── Invalidate(schemaID, version)              → evict cached validators
+└── backed by schema store for cold lookups
+```
+
+- On first write to a field, the factory loads the field definition, compiles constraints (regex, JSON schema, etc.) into a `FieldValidator`, and caches it keyed by `(schemaID, version, fieldPath)`.
+- Subsequent writes reuse the cached validator — no DB lookup or recompilation.
+- On schema version change, the cache for that schema version is invalidated.
+- JSON Schema validators are particularly expensive to compile, so caching matters most there.
+
 ---
 
 ## 5. Change Propagation

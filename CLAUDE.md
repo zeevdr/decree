@@ -47,18 +47,20 @@ make clean       # remove bin/ and generated code
 
 ### Generated Code
 
-- Proto → `gen/go/centralconfig/v1/*.pb.go` (committed)
+- Proto → `api/centralconfig/v1/*.pb.go` (committed)
 - sqlc → `internal/storage/dbstore/*.gen.go` (committed)
 - Both are marked in `.gitattributes` as `linguist-generated`
 
 ## Project Structure
 
 ```
+go.work              # Go workspace (service + api + sdk)
 cmd/server/          # Entry point
 proto/               # Protobuf definitions (API source of truth)
+api/                 # Generated proto code (own module, lightweight deps)
+sdk/                 # Client SDK (own module, depends on api/)
 db/queries/          # SQL queries (DB source of truth)
 db/migrations/       # goose migrations
-gen/                 # Generated proto code
 internal/
 ├── server/          # gRPC server setup, interceptors
 ├── schema/          # SchemaService implementation

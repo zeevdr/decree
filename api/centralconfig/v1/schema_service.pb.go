@@ -1691,8 +1691,8 @@ const file_centralconfig_v1_schema_service_proto_rawDesc = "" +
 	"\vUnlockField\x12$.centralconfig.v1.UnlockFieldRequest\x1a%.centralconfig.v1.UnlockFieldResponse\x12c\n" +
 	"\x0eListFieldLocks\x12'.centralconfig.v1.ListFieldLocksRequest\x1a(.centralconfig.v1.ListFieldLocksResponse\x12]\n" +
 	"\fExportSchema\x12%.centralconfig.v1.ExportSchemaRequest\x1a&.centralconfig.v1.ExportSchemaResponse\x12]\n" +
-	"\fImportSchema\x12%.centralconfig.v1.ImportSchemaRequest\x1a&.centralconfig.v1.ImportSchemaResponseB\xdd\x01\n" +
-	"\x14com.centralconfig.v1B\x12SchemaServiceProtoP\x01ZPgithub.com/zeevdr/central-config-service/gen/go/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
+	"\fImportSchema\x12%.centralconfig.v1.ImportSchemaRequest\x1a&.centralconfig.v1.ImportSchemaResponseB\xda\x01\n" +
+	"\x14com.centralconfig.v1B\x12SchemaServiceProtoP\x01ZMgithub.com/zeevdr/central-config-service/api/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
 
 var (
 	file_centralconfig_v1_schema_service_proto_rawDescOnce sync.Once

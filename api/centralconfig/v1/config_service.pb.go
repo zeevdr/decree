@@ -1381,8 +1381,8 @@ const file_centralconfig_v1_config_service_proto_rawDesc = "" +
 	"\x11RollbackToVersion\x12*.centralconfig.v1.RollbackToVersionRequest\x1a+.centralconfig.v1.RollbackToVersionResponse\x12V\n" +
 	"\tSubscribe\x12\".centralconfig.v1.SubscribeRequest\x1a#.centralconfig.v1.SubscribeResponse0\x01\x12]\n" +
 	"\fExportConfig\x12%.centralconfig.v1.ExportConfigRequest\x1a&.centralconfig.v1.ExportConfigResponse\x12]\n" +
-	"\fImportConfig\x12%.centralconfig.v1.ImportConfigRequest\x1a&.centralconfig.v1.ImportConfigResponseB\xdd\x01\n" +
-	"\x14com.centralconfig.v1B\x12ConfigServiceProtoP\x01ZPgithub.com/zeevdr/central-config-service/gen/go/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
+	"\fImportConfig\x12%.centralconfig.v1.ImportConfigRequest\x1a&.centralconfig.v1.ImportConfigResponseB\xda\x01\n" +
+	"\x14com.centralconfig.v1B\x12ConfigServiceProtoP\x01ZMgithub.com/zeevdr/central-config-service/api/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
 
 var (
 	file_centralconfig_v1_config_service_proto_rawDescOnce sync.Once

@@ -1159,9 +1159,9 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\x0fFIELD_TYPE_TIME\x10\x03\x12\x17\n" +
 	"\x13FIELD_TYPE_DURATION\x10\x04\x12\x12\n" +
 	"\x0eFIELD_TYPE_URL\x10\x05\x12\x13\n" +
-	"\x0fFIELD_TYPE_JSON\x10\x06B\xd5\x01\n" +
+	"\x0fFIELD_TYPE_JSON\x10\x06B\xd2\x01\n" +
 	"\x14com.centralconfig.v1B\n" +
-	"TypesProtoP\x01ZPgithub.com/zeevdr/central-config-service/gen/go/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
+	"TypesProtoP\x01ZMgithub.com/zeevdr/central-config-service/api/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
 
 var (
 	file_centralconfig_v1_types_proto_rawDescOnce sync.Once

@@ -24,7 +24,7 @@ modify → generate → test → lint → build → deploy → e2e
 
 | Target | What it does | Runs in |
 |--------|-------------|---------|
-| `make generate` | buf generate + sqlc generate | Docker |
+| `make generate` | buf generate + sqlc generate (single container) | Docker |
 | `make test` | go test ./... | Local |
 | `make lint` | golangci-lint + buf lint + buf breaking | Local (lint), Docker (buf) |
 | `make build` | go build -o bin/central-config-service ./cmd/server | Local |
@@ -34,6 +34,11 @@ modify → generate → test → lint → build → deploy → e2e
 | `make migrate` | run goose migrations | Docker |
 | `make clean` | remove bin/, generated code | Local |
 | `make all` | generate → lint → test → build | Mixed |
+
+### Build Caching
+
+- **Tools image sentinel**: `.tools-image-built` file tracks when the tools Docker image was last built. The image only rebuilds when `build/Dockerfile.tools` changes — subsequent `make generate` calls skip `docker build` entirely (~0.3s vs ~7s).
+- **Single container per target**: `make generate` runs both `buf generate` and `sqlc generate` in one `docker run`. `make lint-proto` runs both `buf lint` and `buf breaking` in one container.
 
 ---
 
