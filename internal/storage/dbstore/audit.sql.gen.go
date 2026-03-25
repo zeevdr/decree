@@ -173,8 +173,8 @@ func (q *Queries) InsertAuditWriteLog(ctx context.Context, arg InsertAuditWriteL
 const queryAuditWriteLog = `-- name: QueryAuditWriteLog :many
 SELECT id, tenant_id, actor, action, field_path, old_value, new_value, config_version, metadata, created_at FROM audit_write_log
 WHERE ($1::UUID IS NULL OR tenant_id = $1)
-  AND ($2::TEXT IS NULL OR actor = $2)
-  AND ($3::TEXT IS NULL OR field_path = $3)
+  AND (NULLIF($2::TEXT, '') IS NULL OR actor = $2)
+  AND (NULLIF($3::TEXT, '') IS NULL OR field_path = $3)
   AND ($4::TIMESTAMPTZ IS NULL OR created_at >= $4)
   AND ($5::TIMESTAMPTZ IS NULL OR created_at <= $5)
 ORDER BY created_at DESC

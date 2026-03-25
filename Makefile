@@ -57,17 +57,11 @@ migrate: $(TOOLS_SENTINEL)
 migrate-down: $(TOOLS_SENTINEL)
 	$(DOCKER_RUN_TOOLS) goose -dir db/migrations postgres "$${DB_WRITE_URL:-postgres://centralconfig:localdev@localhost:5432/centralconfig?sslmode=disable}" down
 
-## e2e: Run end-to-end tests
+## e2e: Run end-to-end tests (docker compose → migrate → test → teardown)
 e2e:
-	docker compose up -d postgres redis
-	@echo "Waiting for PostgreSQL..."
-	@sleep 3
-	$(MAKE) migrate
-	docker compose up -d service
-	@echo "Waiting for service..."
-	@sleep 3
-	go test ./e2e/... -tags=e2e -race -count=1 || (docker compose down && exit 1)
-	docker compose down
+	docker compose up -d --wait service
+	go test ./e2e/... -tags=e2e -v -race -count=1 || (docker compose down -v && exit 1)
+	docker compose down -v
 
 ## clean: Remove build artifacts and generated code
 clean:
