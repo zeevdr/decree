@@ -41,27 +41,46 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// SchemaService manages configuration schemas and tenants.
+// SchemaService manages configuration schemas, tenants, and field-level locking.
+//
+// Schemas define the allowed fields and their types for tenant configurations.
+// Each schema is versioned — updates create new immutable versions that must be
+// published before tenants can use them.
 type SchemaServiceClient interface {
-	// Schema operations.
+	// CreateSchema creates a new schema with an initial draft version (v1).
 	CreateSchema(ctx context.Context, in *CreateSchemaRequest, opts ...grpc.CallOption) (*CreateSchemaResponse, error)
+	// GetSchema retrieves a schema by ID, optionally at a specific version.
 	GetSchema(ctx context.Context, in *GetSchemaRequest, opts ...grpc.CallOption) (*GetSchemaResponse, error)
+	// ListSchemas returns all schemas, ordered by creation time (newest first).
 	ListSchemas(ctx context.Context, in *ListSchemasRequest, opts ...grpc.CallOption) (*ListSchemasResponse, error)
+	// UpdateSchema creates a new draft version by merging field changes with the latest version.
 	UpdateSchema(ctx context.Context, in *UpdateSchemaRequest, opts ...grpc.CallOption) (*UpdateSchemaResponse, error)
+	// DeleteSchema permanently deletes a schema and all its versions. Cascades to tenants.
 	DeleteSchema(ctx context.Context, in *DeleteSchemaRequest, opts ...grpc.CallOption) (*DeleteSchemaResponse, error)
+	// PublishSchema marks a schema version as published and immutable.
+	// Only published versions can be assigned to tenants.
 	PublishSchema(ctx context.Context, in *PublishSchemaRequest, opts ...grpc.CallOption) (*PublishSchemaResponse, error)
-	// Tenant operations.
+	// CreateTenant creates a new tenant assigned to a published schema version.
 	CreateTenant(ctx context.Context, in *CreateTenantRequest, opts ...grpc.CallOption) (*CreateTenantResponse, error)
+	// GetTenant retrieves a tenant by ID.
 	GetTenant(ctx context.Context, in *GetTenantRequest, opts ...grpc.CallOption) (*GetTenantResponse, error)
+	// ListTenants returns tenants, optionally filtered by schema.
 	ListTenants(ctx context.Context, in *ListTenantsRequest, opts ...grpc.CallOption) (*ListTenantsResponse, error)
+	// UpdateTenant updates a tenant's name or upgrades its schema version.
 	UpdateTenant(ctx context.Context, in *UpdateTenantRequest, opts ...grpc.CallOption) (*UpdateTenantResponse, error)
+	// DeleteTenant permanently deletes a tenant and all its configuration data.
 	DeleteTenant(ctx context.Context, in *DeleteTenantRequest, opts ...grpc.CallOption) (*DeleteTenantResponse, error)
-	// Field locking.
+	// LockField prevents a field from being modified.
 	LockField(ctx context.Context, in *LockFieldRequest, opts ...grpc.CallOption) (*LockFieldResponse, error)
+	// UnlockField removes a field lock, allowing modifications again.
 	UnlockField(ctx context.Context, in *UnlockFieldRequest, opts ...grpc.CallOption) (*UnlockFieldResponse, error)
+	// ListFieldLocks returns all active field locks for a tenant.
 	ListFieldLocks(ctx context.Context, in *ListFieldLocksRequest, opts ...grpc.CallOption) (*ListFieldLocksResponse, error)
-	// Import/export.
+	// ExportSchema serializes a schema version to YAML.
 	ExportSchema(ctx context.Context, in *ExportSchemaRequest, opts ...grpc.CallOption) (*ExportSchemaResponse, error)
+	// ImportSchema creates a schema (or new version) from YAML.
+	// Full-replace semantics: the YAML defines the complete field set.
+	// Returns AlreadyExists if the imported fields are identical to the latest version.
 	ImportSchema(ctx context.Context, in *ImportSchemaRequest, opts ...grpc.CallOption) (*ImportSchemaResponse, error)
 }
 
@@ -237,27 +256,46 @@ func (c *schemaServiceClient) ImportSchema(ctx context.Context, in *ImportSchema
 // All implementations must embed UnimplementedSchemaServiceServer
 // for forward compatibility.
 //
-// SchemaService manages configuration schemas and tenants.
+// SchemaService manages configuration schemas, tenants, and field-level locking.
+//
+// Schemas define the allowed fields and their types for tenant configurations.
+// Each schema is versioned — updates create new immutable versions that must be
+// published before tenants can use them.
 type SchemaServiceServer interface {
-	// Schema operations.
+	// CreateSchema creates a new schema with an initial draft version (v1).
 	CreateSchema(context.Context, *CreateSchemaRequest) (*CreateSchemaResponse, error)
+	// GetSchema retrieves a schema by ID, optionally at a specific version.
 	GetSchema(context.Context, *GetSchemaRequest) (*GetSchemaResponse, error)
+	// ListSchemas returns all schemas, ordered by creation time (newest first).
 	ListSchemas(context.Context, *ListSchemasRequest) (*ListSchemasResponse, error)
+	// UpdateSchema creates a new draft version by merging field changes with the latest version.
 	UpdateSchema(context.Context, *UpdateSchemaRequest) (*UpdateSchemaResponse, error)
+	// DeleteSchema permanently deletes a schema and all its versions. Cascades to tenants.
 	DeleteSchema(context.Context, *DeleteSchemaRequest) (*DeleteSchemaResponse, error)
+	// PublishSchema marks a schema version as published and immutable.
+	// Only published versions can be assigned to tenants.
 	PublishSchema(context.Context, *PublishSchemaRequest) (*PublishSchemaResponse, error)
-	// Tenant operations.
+	// CreateTenant creates a new tenant assigned to a published schema version.
 	CreateTenant(context.Context, *CreateTenantRequest) (*CreateTenantResponse, error)
+	// GetTenant retrieves a tenant by ID.
 	GetTenant(context.Context, *GetTenantRequest) (*GetTenantResponse, error)
+	// ListTenants returns tenants, optionally filtered by schema.
 	ListTenants(context.Context, *ListTenantsRequest) (*ListTenantsResponse, error)
+	// UpdateTenant updates a tenant's name or upgrades its schema version.
 	UpdateTenant(context.Context, *UpdateTenantRequest) (*UpdateTenantResponse, error)
+	// DeleteTenant permanently deletes a tenant and all its configuration data.
 	DeleteTenant(context.Context, *DeleteTenantRequest) (*DeleteTenantResponse, error)
-	// Field locking.
+	// LockField prevents a field from being modified.
 	LockField(context.Context, *LockFieldRequest) (*LockFieldResponse, error)
+	// UnlockField removes a field lock, allowing modifications again.
 	UnlockField(context.Context, *UnlockFieldRequest) (*UnlockFieldResponse, error)
+	// ListFieldLocks returns all active field locks for a tenant.
 	ListFieldLocks(context.Context, *ListFieldLocksRequest) (*ListFieldLocksResponse, error)
-	// Import/export.
+	// ExportSchema serializes a schema version to YAML.
 	ExportSchema(context.Context, *ExportSchemaRequest) (*ExportSchemaResponse, error)
+	// ImportSchema creates a schema (or new version) from YAML.
+	// Full-replace semantics: the YAML defines the complete field set.
+	// Returns AlreadyExists if the imported fields are identical to the latest version.
 	ImportSchema(context.Context, *ImportSchemaRequest) (*ImportSchemaResponse, error)
 	mustEmbedUnimplementedSchemaServiceServer()
 }

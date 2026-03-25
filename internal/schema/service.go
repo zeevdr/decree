@@ -35,6 +35,9 @@ func (s *Service) CreateSchema(ctx context.Context, req *pb.CreateSchemaRequest)
 	if req.Name == "" {
 		return nil, status.Error(codes.InvalidArgument, "name is required")
 	}
+	if !isValidSlug(req.Name) {
+		return nil, status.Error(codes.InvalidArgument, "name must be a slug: lowercase alphanumeric and hyphens, 1-63 chars")
+	}
 
 	schema, err := s.store.CreateSchema(ctx, dbstore.CreateSchemaParams{
 		Name:        req.Name,
@@ -272,6 +275,9 @@ func (s *Service) CreateTenant(ctx context.Context, req *pb.CreateTenantRequest)
 	if req.Name == "" {
 		return nil, status.Error(codes.InvalidArgument, "name is required")
 	}
+	if !isValidSlug(req.Name) {
+		return nil, status.Error(codes.InvalidArgument, "name must be a slug: lowercase alphanumeric and hyphens, 1-63 chars")
+	}
 
 	schemaID, err := parseUUID(req.SchemaId)
 	if err != nil {
@@ -375,6 +381,9 @@ func (s *Service) UpdateTenant(ctx context.Context, req *pb.UpdateTenantRequest)
 	var tenant dbstore.Tenant
 
 	if req.Name != nil && *req.Name != "" {
+		if !isValidSlug(*req.Name) {
+			return nil, status.Error(codes.InvalidArgument, "name must be a slug: lowercase alphanumeric and hyphens, 1-63 chars")
+		}
 		tenant, err = s.store.UpdateTenantName(ctx, dbstore.UpdateTenantNameParams{
 			ID:   tenantID,
 			Name: *req.Name,
@@ -493,14 +502,120 @@ func (s *Service) ListFieldLocks(ctx context.Context, req *pb.ListFieldLocksRequ
 	}, nil
 }
 
-// --- Import/export (placeholder — YAML serialization to be implemented) ---
+// --- Import/export ---
 
 func (s *Service) ExportSchema(ctx context.Context, req *pb.ExportSchemaRequest) (*pb.ExportSchemaResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "export not yet implemented")
+	// Load the schema via GetSchema to reuse version resolution.
+	getResp, err := s.GetSchema(ctx, &pb.GetSchemaRequest{
+		Id:      req.Id,
+		Version: req.Version,
+	})
+	if err != nil {
+		return nil, err // Already a gRPC status error.
+	}
+
+	doc := schemaToYAML(getResp.Schema)
+	data, err := marshalSchemaYAML(doc)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to marshal schema to YAML")
+	}
+
+	return &pb.ExportSchemaResponse{YamlContent: data}, nil
 }
 
 func (s *Service) ImportSchema(ctx context.Context, req *pb.ImportSchemaRequest) (*pb.ImportSchemaResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "import not yet implemented")
+	doc, err := unmarshalSchemaYAML(req.YamlContent)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid schema YAML: %v", err)
+	}
+
+	fields := yamlToProtoFields(doc)
+	checksum := computeChecksum(fields)
+
+	// Check if schema already exists by name.
+	existing, err := s.store.GetSchemaByName(ctx, doc.Name)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, status.Error(codes.Internal, "failed to look up schema")
+	}
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		// New schema — create with v1.
+		return s.importCreateNew(ctx, doc, fields, checksum)
+	}
+
+	// Existing schema — check if identical to latest version.
+	latestVersion, err := s.store.GetLatestSchemaVersion(ctx, existing.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to get latest version")
+	}
+
+	if latestVersion.Checksum == checksum {
+		// No changes — return existing schema.
+		existingFields, err := s.store.GetSchemaFields(ctx, latestVersion.ID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to get fields")
+		}
+		return &pb.ImportSchemaResponse{
+			Schema: schemaToProto(existing, latestVersion, existingFields),
+		}, status.Error(codes.AlreadyExists, "schema is identical to the latest version")
+	}
+
+	// Create new version.
+	return s.importNewVersion(ctx, existing, latestVersion, doc, fields, checksum)
+}
+
+func (s *Service) importCreateNew(ctx context.Context, doc *SchemaYAML, fields []*pb.SchemaField, checksum string) (*pb.ImportSchemaResponse, error) {
+	schema, err := s.store.CreateSchema(ctx, dbstore.CreateSchemaParams{
+		Name:        doc.Name,
+		Description: ptrString(doc.Description),
+	})
+	if err != nil {
+		s.logger.ErrorContext(ctx, "import: create schema", "error", err)
+		return nil, status.Error(codes.Internal, "failed to create schema")
+	}
+
+	version, err := s.store.CreateSchemaVersion(ctx, dbstore.CreateSchemaVersionParams{
+		SchemaID:    schema.ID,
+		Version:     1,
+		Description: ptrString(doc.VersionDescription),
+		Checksum:    checksum,
+	})
+	if err != nil {
+		s.logger.ErrorContext(ctx, "import: create version", "error", err)
+		return nil, status.Error(codes.Internal, "failed to create schema version")
+	}
+
+	dbFields, err := s.createFields(ctx, version.ID, fields)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ImportSchemaResponse{
+		Schema: schemaToProto(schema, version, dbFields),
+	}, nil
+}
+
+func (s *Service) importNewVersion(ctx context.Context, schema dbstore.Schema, latestVersion dbstore.SchemaVersion, doc *SchemaYAML, fields []*pb.SchemaField, checksum string) (*pb.ImportSchemaResponse, error) {
+	newVersion, err := s.store.CreateSchemaVersion(ctx, dbstore.CreateSchemaVersionParams{
+		SchemaID:      schema.ID,
+		Version:       latestVersion.Version + 1,
+		ParentVersion: &latestVersion.Version,
+		Description:   ptrString(doc.VersionDescription),
+		Checksum:      checksum,
+	})
+	if err != nil {
+		s.logger.ErrorContext(ctx, "import: create new version", "error", err)
+		return nil, status.Error(codes.Internal, "failed to create schema version")
+	}
+
+	dbFields, err := s.createFields(ctx, newVersion.ID, fields)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ImportSchemaResponse{
+		Schema: schemaToProto(schema, newVersion, dbFields),
+	}, nil
 }
 
 // --- Helpers ---

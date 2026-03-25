@@ -29,13 +29,22 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// AuditService provides access to change history and usage statistics.
+// AuditService provides read-only access to the change history and usage
+// statistics for tenant configurations.
+//
+// Write events are recorded automatically by the ConfigService whenever
+// configuration values are modified (atomically with the config change).
+// Usage statistics are tracked asynchronously via batched read counters.
 type AuditServiceClient interface {
-	// Query write events (config changes).
+	// QueryWriteLog searches the audit log for config change events.
+	// All filter parameters are optional — omit a filter to match all values.
 	QueryWriteLog(ctx context.Context, in *QueryWriteLogRequest, opts ...grpc.CallOption) (*QueryWriteLogResponse, error)
-	// Query read usage statistics.
+	// GetFieldUsage returns aggregated read statistics for a specific field.
 	GetFieldUsage(ctx context.Context, in *GetFieldUsageRequest, opts ...grpc.CallOption) (*GetFieldUsageResponse, error)
+	// GetTenantUsage returns aggregated read statistics for all fields of a tenant.
 	GetTenantUsage(ctx context.Context, in *GetTenantUsageRequest, opts ...grpc.CallOption) (*GetTenantUsageResponse, error)
+	// GetUnusedFields returns field paths that have not been read since the given time.
+	// Useful for identifying configuration fields that may be safe to deprecate.
 	GetUnusedFields(ctx context.Context, in *GetUnusedFieldsRequest, opts ...grpc.CallOption) (*GetUnusedFieldsResponse, error)
 }
 
@@ -91,13 +100,22 @@ func (c *auditServiceClient) GetUnusedFields(ctx context.Context, in *GetUnusedF
 // All implementations must embed UnimplementedAuditServiceServer
 // for forward compatibility.
 //
-// AuditService provides access to change history and usage statistics.
+// AuditService provides read-only access to the change history and usage
+// statistics for tenant configurations.
+//
+// Write events are recorded automatically by the ConfigService whenever
+// configuration values are modified (atomically with the config change).
+// Usage statistics are tracked asynchronously via batched read counters.
 type AuditServiceServer interface {
-	// Query write events (config changes).
+	// QueryWriteLog searches the audit log for config change events.
+	// All filter parameters are optional — omit a filter to match all values.
 	QueryWriteLog(context.Context, *QueryWriteLogRequest) (*QueryWriteLogResponse, error)
-	// Query read usage statistics.
+	// GetFieldUsage returns aggregated read statistics for a specific field.
 	GetFieldUsage(context.Context, *GetFieldUsageRequest) (*GetFieldUsageResponse, error)
+	// GetTenantUsage returns aggregated read statistics for all fields of a tenant.
 	GetTenantUsage(context.Context, *GetTenantUsageRequest) (*GetTenantUsageResponse, error)
+	// GetUnusedFields returns field paths that have not been read since the given time.
+	// Useful for identifying configuration fields that may be safe to deprecate.
 	GetUnusedFields(context.Context, *GetUnusedFieldsRequest) (*GetUnusedFieldsResponse, error)
 	mustEmbedUnimplementedAuditServiceServer()
 }

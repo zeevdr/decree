@@ -23,14 +23,21 @@ const (
 )
 
 type QueryWriteLogRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      *string                `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"`
-	Actor         *string                `protobuf:"bytes,2,opt,name=actor,proto3,oneof" json:"actor,omitempty"`
-	FieldPath     *string                `protobuf:"bytes,3,opt,name=field_path,json=fieldPath,proto3,oneof" json:"field_path,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3,oneof" json:"start_time,omitempty"`
-	EndTime       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3,oneof" json:"end_time,omitempty"`
-	PageSize      int32                  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,7,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Filter by tenant ID (UUID). If omitted, returns entries across all tenants.
+	TenantId *string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"`
+	// Filter by actor (JWT subject). If omitted, matches all actors.
+	Actor *string `protobuf:"bytes,2,opt,name=actor,proto3,oneof" json:"actor,omitempty"`
+	// Filter by field path. If omitted, matches all fields.
+	FieldPath *string `protobuf:"bytes,3,opt,name=field_path,json=fieldPath,proto3,oneof" json:"field_path,omitempty"`
+	// Filter entries created at or after this time. If omitted, no lower bound.
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3,oneof" json:"start_time,omitempty"`
+	// Filter entries created at or before this time. If omitted, no upper bound.
+	EndTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3,oneof" json:"end_time,omitempty"`
+	// Maximum number of results to return. Defaults to 50, max 100.
+	PageSize int32 `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Pagination token from a previous QueryWriteLogResponse.
+	PageToken     string `protobuf:"bytes,7,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,9 +122,11 @@ func (x *QueryWriteLogRequest) GetPageToken() string {
 }
 
 type QueryWriteLogResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Entries       []*AuditEntry          `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Audit entries matching the filters, ordered by created_at descending.
+	Entries []*AuditEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	// Token for the next page. Empty if no more results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -167,10 +176,14 @@ func (x *QueryWriteLogResponse) GetNextPageToken() string {
 }
 
 type GetFieldUsageRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPath     string                 `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=start_time,json=startTime,proto3,oneof" json:"start_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Dot-separated field path to query.
+	FieldPath string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// Start of the time range. If omitted, includes all historical data.
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=start_time,json=startTime,proto3,oneof" json:"start_time,omitempty"`
+	// End of the time range. If omitted, includes up to the current time.
 	EndTime       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=end_time,json=endTime,proto3,oneof" json:"end_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -235,8 +248,9 @@ func (x *GetFieldUsageRequest) GetEndTime() *timestamppb.Timestamp {
 }
 
 type GetFieldUsageResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Stats         *UsageStats            `protobuf:"bytes,1,opt,name=stats,proto3" json:"stats,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Aggregated usage statistics across the queried time range.
+	Stats         *UsageStats `protobuf:"bytes,1,opt,name=stats,proto3" json:"stats,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -279,9 +293,12 @@ func (x *GetFieldUsageResponse) GetStats() *UsageStats {
 }
 
 type GetTenantUsageRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3,oneof" json:"start_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Start of the time range. If omitted, includes all historical data.
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3,oneof" json:"start_time,omitempty"`
+	// End of the time range. If omitted, includes up to the current time.
 	EndTime       *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=end_time,json=endTime,proto3,oneof" json:"end_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -339,8 +356,9 @@ func (x *GetTenantUsageRequest) GetEndTime() *timestamppb.Timestamp {
 }
 
 type GetTenantUsageResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FieldStats    []*UsageStats          `protobuf:"bytes,1,rep,name=field_stats,json=fieldStats,proto3" json:"field_stats,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Per-field usage statistics, ordered by field path.
+	FieldStats    []*UsageStats `protobuf:"bytes,1,rep,name=field_stats,json=fieldStats,proto3" json:"field_stats,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -383,9 +401,11 @@ func (x *GetTenantUsageResponse) GetFieldStats() []*UsageStats {
 }
 
 type GetUnusedFieldsRequest struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	// Fields not read since this time are considered unused.
+	// Required — there is no "all time" default to avoid expensive full scans.
 	Since         *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=since,proto3" json:"since,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -436,8 +456,9 @@ func (x *GetUnusedFieldsRequest) GetSince() *timestamppb.Timestamp {
 }
 
 type GetUnusedFieldsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FieldPaths    []string               `protobuf:"bytes,1,rep,name=field_paths,json=fieldPaths,proto3" json:"field_paths,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Dot-separated paths of fields with no reads since the specified time.
+	FieldPaths    []string `protobuf:"bytes,1,rep,name=field_paths,json=fieldPaths,proto3" json:"field_paths,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

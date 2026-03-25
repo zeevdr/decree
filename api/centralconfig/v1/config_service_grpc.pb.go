@@ -36,23 +36,41 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// ConfigService manages configuration values, versions, and subscriptions.
+// ConfigService manages configuration values, versions, and real-time subscriptions.
+//
+// Configuration is stored per-tenant using delta versioning: each write creates a
+// new version containing only the changed fields. The full config at any version is
+// the union of all deltas up to that version (latest value per field wins).
+//
+// Read operations are cached in Redis. Write operations are atomic: the config
+// version, values, and audit log entry are committed in a single database transaction.
 type ConfigServiceClient interface {
-	// Read operations.
+	// GetConfig returns the full resolved configuration for a tenant.
 	GetConfig(ctx context.Context, in *GetConfigRequest, opts ...grpc.CallOption) (*GetConfigResponse, error)
+	// GetField returns a single configuration value by field path.
 	GetField(ctx context.Context, in *GetFieldRequest, opts ...grpc.CallOption) (*GetFieldResponse, error)
+	// GetFields returns multiple configuration values by field paths.
+	// Fields that don't exist are silently omitted from the response.
 	GetFields(ctx context.Context, in *GetFieldsRequest, opts ...grpc.CallOption) (*GetFieldsResponse, error)
-	// Write operations.
+	// SetField sets a single configuration value, creating a new config version.
 	SetField(ctx context.Context, in *SetFieldRequest, opts ...grpc.CallOption) (*SetFieldResponse, error)
+	// SetFields sets multiple configuration values in a single config version.
 	SetFields(ctx context.Context, in *SetFieldsRequest, opts ...grpc.CallOption) (*SetFieldsResponse, error)
-	// Version operations.
+	// ListVersions returns config version history for a tenant (newest first).
 	ListVersions(ctx context.Context, in *ListVersionsRequest, opts ...grpc.CallOption) (*ListVersionsResponse, error)
+	// GetVersion retrieves metadata for a specific config version.
 	GetVersion(ctx context.Context, in *GetVersionRequest, opts ...grpc.CallOption) (*GetVersionResponse, error)
+	// RollbackToVersion creates a new version with the same values as the target version.
+	// This does not delete intermediate versions — it creates a new version that
+	// copies the target's values.
 	RollbackToVersion(ctx context.Context, in *RollbackToVersionRequest, opts ...grpc.CallOption) (*RollbackToVersionResponse, error)
-	// Subscriptions.
+	// Subscribe opens a server-streaming connection that pushes ConfigChange events
+	// whenever the tenant's configuration is modified. The stream remains open until
+	// the client disconnects or the server shuts down.
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeResponse], error)
-	// Import/export.
+	// ExportConfig serializes a tenant's configuration to YAML.
 	ExportConfig(ctx context.Context, in *ExportConfigRequest, opts ...grpc.CallOption) (*ExportConfigResponse, error)
+	// ImportConfig applies configuration values from YAML.
 	ImportConfig(ctx context.Context, in *ImportConfigRequest, opts ...grpc.CallOption) (*ImportConfigResponse, error)
 }
 
@@ -187,23 +205,41 @@ func (c *configServiceClient) ImportConfig(ctx context.Context, in *ImportConfig
 // All implementations must embed UnimplementedConfigServiceServer
 // for forward compatibility.
 //
-// ConfigService manages configuration values, versions, and subscriptions.
+// ConfigService manages configuration values, versions, and real-time subscriptions.
+//
+// Configuration is stored per-tenant using delta versioning: each write creates a
+// new version containing only the changed fields. The full config at any version is
+// the union of all deltas up to that version (latest value per field wins).
+//
+// Read operations are cached in Redis. Write operations are atomic: the config
+// version, values, and audit log entry are committed in a single database transaction.
 type ConfigServiceServer interface {
-	// Read operations.
+	// GetConfig returns the full resolved configuration for a tenant.
 	GetConfig(context.Context, *GetConfigRequest) (*GetConfigResponse, error)
+	// GetField returns a single configuration value by field path.
 	GetField(context.Context, *GetFieldRequest) (*GetFieldResponse, error)
+	// GetFields returns multiple configuration values by field paths.
+	// Fields that don't exist are silently omitted from the response.
 	GetFields(context.Context, *GetFieldsRequest) (*GetFieldsResponse, error)
-	// Write operations.
+	// SetField sets a single configuration value, creating a new config version.
 	SetField(context.Context, *SetFieldRequest) (*SetFieldResponse, error)
+	// SetFields sets multiple configuration values in a single config version.
 	SetFields(context.Context, *SetFieldsRequest) (*SetFieldsResponse, error)
-	// Version operations.
+	// ListVersions returns config version history for a tenant (newest first).
 	ListVersions(context.Context, *ListVersionsRequest) (*ListVersionsResponse, error)
+	// GetVersion retrieves metadata for a specific config version.
 	GetVersion(context.Context, *GetVersionRequest) (*GetVersionResponse, error)
+	// RollbackToVersion creates a new version with the same values as the target version.
+	// This does not delete intermediate versions — it creates a new version that
+	// copies the target's values.
 	RollbackToVersion(context.Context, *RollbackToVersionRequest) (*RollbackToVersionResponse, error)
-	// Subscriptions.
+	// Subscribe opens a server-streaming connection that pushes ConfigChange events
+	// whenever the tenant's configuration is modified. The stream remains open until
+	// the client disconnects or the server shuts down.
 	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[SubscribeResponse]) error
-	// Import/export.
+	// ExportConfig serializes a tenant's configuration to YAML.
 	ExportConfig(context.Context, *ExportConfigRequest) (*ExportConfigResponse, error)
+	// ImportConfig applies configuration values from YAML.
 	ImportConfig(context.Context, *ImportConfigRequest) (*ImportConfigResponse, error)
 	mustEmbedUnimplementedConfigServiceServer()
 }

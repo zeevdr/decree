@@ -26,7 +26,7 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] Schema field management (add, modify, remove via update)
 - [x] Tenant CRUD (create with published schema validation, get, list, update name/version, delete)
 - [x] Field locking (lock, unlock, list with JSON-encoded locked values)
-- [ ] Schema import/export (YAML) — stubbed as unimplemented
+- [x] Schema import/export (YAML) — OAS-style constraints, syntax v1, full-replace import with checksum dedup
 - [x] Store interface with PostgreSQL implementation (read/write pool routing)
 - [x] Proto <-> DB conversion helpers, deterministic checksum computation
 

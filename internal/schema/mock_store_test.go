@@ -23,6 +23,11 @@ func (m *mockStore) GetSchemaByID(ctx context.Context, id pgtype.UUID) (dbstore.
 	return args.Get(0).(dbstore.Schema), args.Error(1)
 }
 
+func (m *mockStore) GetSchemaByName(ctx context.Context, name string) (dbstore.Schema, error) {
+	args := m.Called(ctx, name)
+	return args.Get(0).(dbstore.Schema), args.Error(1)
+}
+
 func (m *mockStore) ListSchemas(ctx context.Context, arg dbstore.ListSchemasParams) ([]dbstore.Schema, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).([]dbstore.Schema), args.Error(1)

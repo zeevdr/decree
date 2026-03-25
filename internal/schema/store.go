@@ -11,6 +11,7 @@ type Store interface {
 	// Schema CRUD.
 	CreateSchema(ctx context.Context, arg dbstore.CreateSchemaParams) (dbstore.Schema, error)
 	GetSchemaByID(ctx context.Context, id pgUUID) (dbstore.Schema, error)
+	GetSchemaByName(ctx context.Context, name string) (dbstore.Schema, error)
 	ListSchemas(ctx context.Context, arg dbstore.ListSchemasParams) ([]dbstore.Schema, error)
 	DeleteSchema(ctx context.Context, id pgUUID) error
 

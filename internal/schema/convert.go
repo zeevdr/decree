@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -170,6 +171,14 @@ func computeChecksum(fields []*pb.SchemaField) string {
 		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))[:16]
+}
+
+// slugRe matches valid slug names: lowercase alphanumeric with hyphens, not starting/ending with hyphen.
+var slugRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+// isValidSlug checks if name is a valid slug (lowercase alphanumeric, hyphens allowed, 1-63 chars).
+func isValidSlug(name string) bool {
+	return len(name) >= 1 && len(name) <= 63 && slugRe.MatchString(name)
 }
 
 // ptrString returns a pointer to s, or nil if empty.

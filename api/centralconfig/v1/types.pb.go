@@ -23,16 +23,29 @@ const (
 )
 
 // FieldType enumerates the supported configuration value types.
+// All values are stored as strings; the type controls validation and
+// constraint interpretation.
 type FieldType int32
 
 const (
 	FieldType_FIELD_TYPE_UNSPECIFIED FieldType = 0
-	FieldType_FIELD_TYPE_INT         FieldType = 1
-	FieldType_FIELD_TYPE_STRING      FieldType = 2
-	FieldType_FIELD_TYPE_TIME        FieldType = 3
-	FieldType_FIELD_TYPE_DURATION    FieldType = 4
-	FieldType_FIELD_TYPE_URL         FieldType = 5
-	FieldType_FIELD_TYPE_JSON        FieldType = 6
+	// Integer value. Encoded as a decimal string (e.g. "42").
+	// Supports minimum/maximum constraints on the numeric value.
+	FieldType_FIELD_TYPE_INT FieldType = 1
+	// Free-form string value.
+	// Supports minimum/maximum constraints on string length, pattern (regex),
+	// and enum constraints.
+	FieldType_FIELD_TYPE_STRING FieldType = 2
+	// Timestamp value. Encoded as an RFC 3339 string (e.g. "2025-01-15T09:30:00Z").
+	FieldType_FIELD_TYPE_TIME FieldType = 3
+	// Duration value. Encoded as a Go-style duration string (e.g. "24h", "30m", "500ms").
+	// Supports minimum/maximum constraints on the duration in seconds.
+	FieldType_FIELD_TYPE_DURATION FieldType = 4
+	// URL value. Must be a valid absolute URL.
+	FieldType_FIELD_TYPE_URL FieldType = 5
+	// JSON value. Stored as a JSON-encoded string.
+	// Supports json_schema constraint for structural validation.
+	FieldType_FIELD_TYPE_JSON FieldType = 6
 )
 
 // Enum value maps for FieldType.
@@ -85,16 +98,23 @@ func (FieldType) EnumDescriptor() ([]byte, []int) {
 }
 
 // FieldConstraints defines validation rules for a schema field.
+// Which constraints apply depends on the field's type — see FieldType docs.
 type FieldConstraints struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// For int: min/max value. For string: min/max length.
+	// For int/duration: minimum allowed value.
+	// For string: minimum allowed length.
 	Min *int64 `protobuf:"varint,1,opt,name=min,proto3,oneof" json:"min,omitempty"`
+	// For int/duration: maximum allowed value.
+	// For string: maximum allowed length.
 	Max *int64 `protobuf:"varint,2,opt,name=max,proto3,oneof" json:"max,omitempty"`
-	// Regex pattern (string fields).
+	// Regular expression pattern the value must match.
+	// Applies to string-typed fields. Uses RE2 syntax.
 	Regex *string `protobuf:"bytes,3,opt,name=regex,proto3,oneof" json:"regex,omitempty"`
-	// Allowed values (enum).
+	// Allowed values. If non-empty, the value must be one of these.
+	// Applies to any field type.
 	EnumValues []string `protobuf:"bytes,4,rep,name=enum_values,json=enumValues,proto3" json:"enum_values,omitempty"`
-	// JSON Schema for json-typed fields.
+	// JSON Schema document for structural validation of json-typed fields.
+	// Encoded as a JSON string.
 	JsonSchema    *string `protobuf:"bytes,5,opt,name=json_schema,json=jsonSchema,proto3,oneof" json:"json_schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -165,20 +185,27 @@ func (x *FieldConstraints) GetJsonSchema() string {
 	return ""
 }
 
-// SchemaField defines a single field within a schema.
+// SchemaField defines a single field within a configuration schema.
 type SchemaField struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Dot-separated hierarchical path, e.g. "payments.settlement.window".
-	Path        string            `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Type        FieldType         `protobuf:"varint,2,opt,name=type,proto3,enum=centralconfig.v1.FieldType" json:"type,omitempty"`
+	// Dot-separated hierarchical path (e.g. "payments.settlement.window").
+	// Must be unique within a schema version.
+	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	// The value type for this field. Controls validation behavior.
+	Type FieldType `protobuf:"varint,2,opt,name=type,proto3,enum=centralconfig.v1.FieldType" json:"type,omitempty"`
+	// Validation constraints. Optional — when absent, any value of the
+	// correct type is accepted.
 	Constraints *FieldConstraints `protobuf:"bytes,3,opt,name=constraints,proto3" json:"constraints,omitempty"`
-	Nullable    bool              `protobuf:"varint,4,opt,name=nullable,proto3" json:"nullable,omitempty"`
-	Deprecated  bool              `protobuf:"varint,5,opt,name=deprecated,proto3" json:"deprecated,omitempty"`
-	// If deprecated, reads of this field redirect to this path.
+	// Whether this field accepts empty/null values.
+	Nullable bool `protobuf:"varint,4,opt,name=nullable,proto3" json:"nullable,omitempty"`
+	// Whether this field is deprecated. Deprecated fields are still readable
+	// but clients should migrate to redirect_to if set.
+	Deprecated bool `protobuf:"varint,5,opt,name=deprecated,proto3" json:"deprecated,omitempty"`
+	// When deprecated, reads of this field can be redirected to this path.
 	RedirectTo *string `protobuf:"bytes,6,opt,name=redirect_to,json=redirectTo,proto3,oneof" json:"redirect_to,omitempty"`
-	// Default value (encoded as string).
+	// Default value for this field, encoded as a string matching the field type.
 	DefaultValue *string `protobuf:"bytes,7,opt,name=default_value,json=defaultValue,proto3,oneof" json:"default_value,omitempty"`
-	// Human-readable description of the field.
+	// Human-readable description of the field's purpose.
 	Description   *string `protobuf:"bytes,8,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -271,20 +298,35 @@ func (x *SchemaField) GetDescription() string {
 }
 
 // Schema represents a configuration schema template.
+// Schemas define the allowed fields and their types for tenant configurations.
+// Each schema is versioned — updates create new immutable versions.
 type Schema struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description        string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Version            int32                  `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
-	ParentVersion      *int32                 `protobuf:"varint,5,opt,name=parent_version,json=parentVersion,proto3,oneof" json:"parent_version,omitempty"`
-	VersionDescription string                 `protobuf:"bytes,6,opt,name=version_description,json=versionDescription,proto3" json:"version_description,omitempty"`
-	Checksum           string                 `protobuf:"bytes,7,opt,name=checksum,proto3" json:"checksum,omitempty"`
-	Published          bool                   `protobuf:"varint,8,opt,name=published,proto3" json:"published,omitempty"`
-	Fields             []*SchemaField         `protobuf:"bytes,9,rep,name=fields,proto3" json:"fields,omitempty"`
-	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Server-assigned unique identifier (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Unique name for this schema. Must be a valid slug: lowercase alphanumeric
+	// characters and hyphens, 1-63 characters, matching [a-z0-9]([a-z0-9-]*[a-z0-9])?.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Human-readable description of the schema's purpose.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Schema version number (monotonically increasing, starting at 1).
+	Version int32 `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+	// The version this was derived from. Absent for the initial version (v1).
+	ParentVersion *int32 `protobuf:"varint,5,opt,name=parent_version,json=parentVersion,proto3,oneof" json:"parent_version,omitempty"`
+	// Description of what changed in this version.
+	VersionDescription string `protobuf:"bytes,6,opt,name=version_description,json=versionDescription,proto3" json:"version_description,omitempty"`
+	// Deterministic checksum of the field definitions (type, constraints, path).
+	// Used for change detection on import.
+	Checksum string `protobuf:"bytes,7,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	// Whether this version is published. Only published versions can be
+	// assigned to tenants. Published versions are immutable.
+	Published bool `protobuf:"varint,8,opt,name=published,proto3" json:"published,omitempty"`
+	// The fields defined in this schema version.
+	Fields []*SchemaField `protobuf:"bytes,9,rep,name=fields,proto3" json:"fields,omitempty"`
+	// When this version was created.
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Schema) Reset() {
@@ -387,14 +429,23 @@ func (x *Schema) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// Tenant represents a tenant with an assigned schema.
+// Tenant represents an organization or entity that has its own configuration
+// based on an assigned schema version.
 type Tenant struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	SchemaId      string                 `protobuf:"bytes,3,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
-	SchemaVersion int32                  `protobuf:"varint,4,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Server-assigned unique identifier (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Unique name for this tenant. Must be a valid slug: lowercase alphanumeric
+	// characters and hyphens, 1-63 characters, matching [a-z0-9]([a-z0-9-]*[a-z0-9])?.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// The schema this tenant's configuration is based on (UUID).
+	SchemaId string `protobuf:"bytes,3,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
+	// The specific schema version assigned to this tenant.
+	// Must reference a published schema version.
+	SchemaVersion int32 `protobuf:"varint,4,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	// When the tenant was created.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// When the tenant was last updated (name or schema version change).
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -472,12 +523,16 @@ func (x *Tenant) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// FieldLock represents a locked field for a tenant.
+// FieldLock prevents a configuration field from being modified by non-superadmin users.
+// Superadmins bypass all field locks.
 type FieldLock struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPath string                 `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	// For enum fields: the subset of values locked (not editable by admin).
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant this lock applies to (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The dot-separated field path that is locked.
+	FieldPath string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// For enum fields: the specific subset of values that are locked
+	// (not editable by admin). If empty, the entire field is locked.
 	LockedValues  []string `protobuf:"bytes,3,rep,name=locked_values,json=lockedValues,proto3" json:"locked_values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -534,13 +589,19 @@ func (x *FieldLock) GetLockedValues() []string {
 	return nil
 }
 
-// ConfigValue represents a single configuration value.
+// ConfigValue represents a single configuration value at a point in time.
 type ConfigValue struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	FieldPath string                 `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	Value     string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	Checksum  string                 `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
-	// Human-readable description explaining the specific value.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Dot-separated field path (e.g. "payments.fee").
+	FieldPath string `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// The value, encoded as a string regardless of field type.
+	// See FieldType for encoding conventions per type.
+	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// SHA-256 checksum of the value. Used for optimistic concurrency control
+	// in SetField/SetFields via expected_checksum.
+	Checksum string `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	// Human-readable description explaining this specific value.
+	// Only populated when include_description(s) is true in the request.
 	Description   *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -604,14 +665,23 @@ func (x *ConfigValue) GetDescription() string {
 	return ""
 }
 
-// ConfigVersion represents a point-in-time snapshot of config values.
+// ConfigVersion represents a point-in-time snapshot of configuration changes.
+// Each write operation (SetField, SetFields, RollbackToVersion) creates a new
+// config version. Versions store only the changed fields (delta storage) — the
+// full config at any version is the union of all deltas up to that version.
 type ConfigVersion struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Version       int32                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	CreatedBy     string                 `protobuf:"bytes,5,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Server-assigned unique identifier (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The tenant this version belongs to (UUID).
+	TenantId string `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Version number (monotonically increasing, starting at 1).
+	Version int32 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	// Description of what changed in this version.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// The actor who created this version (from JWT subject, or "unknown" if auth is disabled).
+	CreatedBy string `protobuf:"bytes,5,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// When this version was created.
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -689,12 +759,15 @@ func (x *ConfigVersion) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// Config represents the full configuration for a tenant at a version.
+// Config represents the full resolved configuration for a tenant at a specific version.
 type Config struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Version       int32                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
-	Values        []*ConfigValue         `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant this config belongs to (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The version number this config was resolved at.
+	Version int32 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	// All configuration values at this version.
+	Values        []*ConfigValue `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -750,15 +823,23 @@ func (x *Config) GetValues() []*ConfigValue {
 	return nil
 }
 
-// ConfigChange represents a change event pushed to subscribers.
+// ConfigChange represents a real-time change event pushed to subscribers
+// via the Subscribe streaming RPC.
 type ConfigChange struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Version       int32                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
-	FieldPath     string                 `protobuf:"bytes,3,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	OldValue      string                 `protobuf:"bytes,4,opt,name=old_value,json=oldValue,proto3" json:"old_value,omitempty"`
-	NewValue      string                 `protobuf:"bytes,5,opt,name=new_value,json=newValue,proto3" json:"new_value,omitempty"`
-	ChangedBy     string                 `protobuf:"bytes,6,opt,name=changed_by,json=changedBy,proto3" json:"changed_by,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant whose config changed (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The new config version number created by this change.
+	Version int32 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	// The field that was changed.
+	FieldPath string `protobuf:"bytes,3,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// The previous value (empty string if field was newly created).
+	OldValue string `protobuf:"bytes,4,opt,name=old_value,json=oldValue,proto3" json:"old_value,omitempty"`
+	// The new value.
+	NewValue string `protobuf:"bytes,5,opt,name=new_value,json=newValue,proto3" json:"new_value,omitempty"`
+	// The actor who made the change.
+	ChangedBy string `protobuf:"bytes,6,opt,name=changed_by,json=changedBy,proto3" json:"changed_by,omitempty"`
+	// When the change occurred.
 	ChangedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=changed_at,json=changedAt,proto3" json:"changed_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -843,17 +924,29 @@ func (x *ConfigChange) GetChangedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// AuditEntry represents a write event in the audit log.
+// AuditEntry represents a write event recorded in the audit log.
+// Every config mutation (SetField, SetFields, RollbackToVersion) creates
+// one or more audit entries atomically with the config change.
 type AuditEntry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Actor         string                 `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`
-	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
-	FieldPath     *string                `protobuf:"bytes,5,opt,name=field_path,json=fieldPath,proto3,oneof" json:"field_path,omitempty"`
-	OldValue      *string                `protobuf:"bytes,6,opt,name=old_value,json=oldValue,proto3,oneof" json:"old_value,omitempty"`
-	NewValue      *string                `protobuf:"bytes,7,opt,name=new_value,json=newValue,proto3,oneof" json:"new_value,omitempty"`
-	ConfigVersion *int32                 `protobuf:"varint,8,opt,name=config_version,json=configVersion,proto3,oneof" json:"config_version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Server-assigned unique identifier (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The tenant affected (UUID).
+	TenantId string `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The actor who performed the action (from JWT subject).
+	Actor string `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`
+	// The action type (e.g. "set_field", "rollback").
+	Action string `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	// The field that was changed. Present for set_field actions.
+	FieldPath *string `protobuf:"bytes,5,opt,name=field_path,json=fieldPath,proto3,oneof" json:"field_path,omitempty"`
+	// The previous value. Present for set_field actions.
+	OldValue *string `protobuf:"bytes,6,opt,name=old_value,json=oldValue,proto3,oneof" json:"old_value,omitempty"`
+	// The new value. Present for set_field actions.
+	// For rollback actions, contains the target version (e.g. "v2").
+	NewValue *string `protobuf:"bytes,7,opt,name=new_value,json=newValue,proto3,oneof" json:"new_value,omitempty"`
+	// The config version number created by this action.
+	ConfigVersion *int32 `protobuf:"varint,8,opt,name=config_version,json=configVersion,proto3,oneof" json:"config_version,omitempty"`
+	// When the audit entry was created.
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -952,13 +1045,18 @@ func (x *AuditEntry) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// UsageStats represents read usage statistics for a field.
+// UsageStats represents aggregated read usage statistics for a config field.
 type UsageStats struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPath     string                 `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	ReadCount     int64                  `protobuf:"varint,3,opt,name=read_count,json=readCount,proto3" json:"read_count,omitempty"`
-	LastReadBy    *string                `protobuf:"bytes,4,opt,name=last_read_by,json=lastReadBy,proto3,oneof" json:"last_read_by,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The field path.
+	FieldPath string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// Total number of reads across the queried time range.
+	ReadCount int64 `protobuf:"varint,3,opt,name=read_count,json=readCount,proto3" json:"read_count,omitempty"`
+	// The last actor who read this field (if tracked).
+	LastReadBy *string `protobuf:"bytes,4,opt,name=last_read_by,json=lastReadBy,proto3,oneof" json:"last_read_by,omitempty"`
+	// When this field was last read (if tracked).
 	LastReadAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=last_read_at,json=lastReadAt,proto3,oneof" json:"last_read_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -22,11 +22,13 @@ const (
 )
 
 type GetConfigRequest struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	// If omitted, returns the latest version.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Config version to retrieve. If omitted, returns the latest version.
 	Version *int32 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
-	// When true, includes value descriptions (bypasses cache, hits DB).
+	// When true, includes value-level descriptions in the response.
+	// This bypasses the Redis cache and reads directly from the database.
 	IncludeDescriptions bool `protobuf:"varint,3,opt,name=include_descriptions,json=includeDescriptions,proto3" json:"include_descriptions,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
@@ -84,8 +86,9 @@ func (x *GetConfigRequest) GetIncludeDescriptions() bool {
 }
 
 type GetConfigResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Config        *Config                `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The full resolved configuration at the requested version.
+	Config        *Config `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -128,11 +131,15 @@ func (x *GetConfigResponse) GetConfig() *Config {
 }
 
 type GetFieldRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPath string                 `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	Version   *int32                 `protobuf:"varint,3,opt,name=version,proto3,oneof" json:"version,omitempty"`
-	// When true, includes value description (bypasses cache, hits DB).
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Dot-separated field path (e.g. "payments.fee").
+	FieldPath string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// Config version to read from. If omitted, reads from the latest version.
+	Version *int32 `protobuf:"varint,3,opt,name=version,proto3,oneof" json:"version,omitempty"`
+	// When true, includes the value-level description.
+	// This bypasses the Redis cache and reads directly from the database.
 	IncludeDescription bool `protobuf:"varint,4,opt,name=include_description,json=includeDescription,proto3" json:"include_description,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
@@ -197,8 +204,9 @@ func (x *GetFieldRequest) GetIncludeDescription() bool {
 }
 
 type GetFieldResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Value         *ConfigValue           `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The configuration value. Returns NOT_FOUND if the field has no value set.
+	Value         *ConfigValue `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -241,11 +249,15 @@ func (x *GetFieldResponse) GetValue() *ConfigValue {
 }
 
 type GetFieldsRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	TenantId   string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPaths []string               `protobuf:"bytes,2,rep,name=field_paths,json=fieldPaths,proto3" json:"field_paths,omitempty"`
-	Version    *int32                 `protobuf:"varint,3,opt,name=version,proto3,oneof" json:"version,omitempty"`
-	// When true, includes value descriptions (bypasses cache, hits DB).
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Dot-separated field paths to retrieve.
+	FieldPaths []string `protobuf:"bytes,2,rep,name=field_paths,json=fieldPaths,proto3" json:"field_paths,omitempty"`
+	// Config version to read from. If omitted, reads from the latest version.
+	Version *int32 `protobuf:"varint,3,opt,name=version,proto3,oneof" json:"version,omitempty"`
+	// When true, includes value-level descriptions.
+	// This bypasses the Redis cache and reads directly from the database.
 	IncludeDescriptions bool `protobuf:"varint,4,opt,name=include_descriptions,json=includeDescriptions,proto3" json:"include_descriptions,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
@@ -310,8 +322,9 @@ func (x *GetFieldsRequest) GetIncludeDescriptions() bool {
 }
 
 type GetFieldsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Values        []*ConfigValue         `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The requested values. Fields that don't exist are omitted (not an error).
+	Values        []*ConfigValue `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -354,15 +367,22 @@ func (x *GetFieldsResponse) GetValues() []*ConfigValue {
 }
 
 type SetFieldRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPath string                 `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	Value     string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
-	// Optimistic concurrency: checksum from a previous read.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Dot-separated field path (e.g. "payments.fee").
+	FieldPath string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// The new value, encoded as a string. See FieldType for encoding conventions.
+	Value string `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	// Optimistic concurrency control: the checksum from a previous GetField/GetConfig
+	// response. If provided and the field's current checksum doesn't match, the
+	// request fails with ABORTED. This prevents lost updates when multiple actors
+	// modify the same field concurrently.
 	ExpectedChecksum *string `protobuf:"bytes,4,opt,name=expected_checksum,json=expectedChecksum,proto3,oneof" json:"expected_checksum,omitempty"`
-	// Version-level description explaining the change.
+	// Version-level description explaining why this change was made.
 	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	// Value-level description explaining this specific value.
+	// Value-level description explaining what this specific value means.
+	// Retrievable via include_description in read requests.
 	ValueDescription *string `protobuf:"bytes,6,opt,name=value_description,json=valueDescription,proto3,oneof" json:"value_description,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -441,8 +461,9 @@ func (x *SetFieldRequest) GetValueDescription() string {
 }
 
 type SetFieldResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ConfigVersion *ConfigVersion         `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The newly created config version.
+	ConfigVersion *ConfigVersion `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -485,10 +506,15 @@ func (x *SetFieldResponse) GetConfigVersion() *ConfigVersion {
 }
 
 type SetFieldsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Updates       []*FieldUpdate         `protobuf:"bytes,2,rep,name=updates,proto3" json:"updates,omitempty"`
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Field updates to apply. All updates are applied atomically in a single
+	// config version. If any update fails validation (checksum, field lock),
+	// no changes are committed.
+	Updates []*FieldUpdate `protobuf:"bytes,2,rep,name=updates,proto3" json:"updates,omitempty"`
+	// Version-level description explaining why these changes were made.
+	Description   *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -545,8 +571,9 @@ func (x *SetFieldsRequest) GetDescription() string {
 }
 
 type SetFieldsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ConfigVersion *ConfigVersion         `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The newly created config version.
+	ConfigVersion *ConfigVersion `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -588,12 +615,17 @@ func (x *SetFieldsResponse) GetConfigVersion() *ConfigVersion {
 	return nil
 }
 
+// FieldUpdate represents a single field change within a SetFields batch.
 type FieldUpdate struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	FieldPath        string                 `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	Value            string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	ExpectedChecksum *string                `protobuf:"bytes,3,opt,name=expected_checksum,json=expectedChecksum,proto3,oneof" json:"expected_checksum,omitempty"`
-	// Value-level description explaining this specific value.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Dot-separated field path.
+	FieldPath string `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// The new value, encoded as a string.
+	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// Optimistic concurrency control checksum for this specific field.
+	// See SetFieldRequest.expected_checksum for details.
+	ExpectedChecksum *string `protobuf:"bytes,3,opt,name=expected_checksum,json=expectedChecksum,proto3,oneof" json:"expected_checksum,omitempty"`
+	// Value-level description for this specific field.
 	ValueDescription *string `protobuf:"bytes,4,opt,name=value_description,json=valueDescription,proto3,oneof" json:"value_description,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -658,10 +690,13 @@ func (x *FieldUpdate) GetValueDescription() string {
 }
 
 type ListVersionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Maximum number of results to return. Defaults to 50, max 100.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Pagination token from a previous ListVersionsResponse.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -718,9 +753,11 @@ func (x *ListVersionsRequest) GetPageToken() string {
 }
 
 type ListVersionsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Versions      []*ConfigVersion       `protobuf:"bytes,1,rep,name=versions,proto3" json:"versions,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Config versions, ordered by version number descending (newest first).
+	Versions []*ConfigVersion `protobuf:"bytes,1,rep,name=versions,proto3" json:"versions,omitempty"`
+	// Token for the next page. Empty if no more results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -770,9 +807,11 @@ func (x *ListVersionsResponse) GetNextPageToken() string {
 }
 
 type GetVersionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Version       int32                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The version number to retrieve.
+	Version       int32 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -866,10 +905,16 @@ func (x *GetVersionResponse) GetConfigVersion() *ConfigVersion {
 }
 
 type RollbackToVersionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Version       int32                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The target version to rollback to. The full config at this version
+	// is copied into a new version (the current version number + 1).
+	// The target version itself is not modified.
+	Version int32 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	// Description for the new rollback version. Defaults to
+	// "Rollback to version N" if omitted.
+	Description   *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -926,8 +971,9 @@ func (x *RollbackToVersionRequest) GetDescription() string {
 }
 
 type RollbackToVersionResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ConfigVersion *ConfigVersion         `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The newly created config version containing the rolled-back values.
+	ConfigVersion *ConfigVersion `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -970,9 +1016,11 @@ func (x *RollbackToVersionResponse) GetConfigVersion() *ConfigVersion {
 }
 
 type SubscribeRequest struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	// If empty, subscribes to all fields.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID) to subscribe to.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Field paths to filter on. If empty, receives changes for all fields.
+	// Changes to fields not in this list are silently dropped.
 	FieldPaths    []string `protobuf:"bytes,2,rep,name=field_paths,json=fieldPaths,proto3" json:"field_paths,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1023,8 +1071,9 @@ func (x *SubscribeRequest) GetFieldPaths() []string {
 }
 
 type SubscribeResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Change        *ConfigChange          `protobuf:"bytes,1,opt,name=change,proto3" json:"change,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A configuration change event. Delivered via Redis Pub/Sub internally.
+	Change        *ConfigChange `protobuf:"bytes,1,opt,name=change,proto3" json:"change,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1067,9 +1116,11 @@ func (x *SubscribeResponse) GetChange() *ConfigChange {
 }
 
 type ExportConfigRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Version       *int32                 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Config version to export. If omitted, exports the latest version.
+	Version       *int32 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1164,10 +1215,12 @@ func (x *ExportConfigResponse) GetYamlContent() []byte {
 }
 
 type ImportConfigRequest struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	// YAML-encoded configuration values.
-	YamlContent   []byte  `protobuf:"bytes,2,opt,name=yaml_content,json=yamlContent,proto3" json:"yaml_content,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// YAML-encoded configuration values to import.
+	YamlContent []byte `protobuf:"bytes,2,opt,name=yaml_content,json=yamlContent,proto3" json:"yaml_content,omitempty"`
+	// Description for the new config version created by the import.
 	Description   *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1225,8 +1278,9 @@ func (x *ImportConfigRequest) GetDescription() string {
 }
 
 type ImportConfigResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ConfigVersion *ConfigVersion         `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The config version created by the import.
+	ConfigVersion *ConfigVersion `protobuf:"bytes,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

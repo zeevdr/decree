@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"testing"
@@ -437,4 +438,82 @@ func TestErrorCases(t *testing.T) {
 			assert.Empty(t, resp.Config.Values)
 		}
 	})
+}
+
+// --- Schema Export/Import ---
+
+func TestSchemaExportImport(t *testing.T) {
+	conn := dial(t)
+	schemaSvc := pb.NewSchemaServiceClient(conn)
+	ctx := context.Background()
+
+	// 1. Create a schema with fields.
+	createResp, err := schemaSvc.CreateSchema(ctx, &pb.CreateSchemaRequest{
+		Name:        "export-e2e",
+		Description: ptr("Schema for export testing"),
+		Fields: []*pb.SchemaField{
+			{Path: "trade.fee", Type: pb.FieldType_FIELD_TYPE_STRING, Description: ptr("Fee percentage")},
+			{Path: "trade.currency", Type: pb.FieldType_FIELD_TYPE_STRING, Constraints: &pb.FieldConstraints{
+				EnumValues: []string{"USD", "EUR"},
+			}},
+			{Path: "trade.timeout", Type: pb.FieldType_FIELD_TYPE_DURATION},
+		},
+	})
+	require.NoError(t, err)
+	schemaID := createResp.Schema.Id
+
+	// 2. Export.
+	exportResp, err := schemaSvc.ExportSchema(ctx, &pb.ExportSchemaRequest{Id: schemaID})
+	require.NoError(t, err)
+	assert.NotEmpty(t, exportResp.YamlContent)
+
+	yamlContent := exportResp.YamlContent
+	t.Logf("Exported YAML:\n%s", string(yamlContent))
+
+	// Verify YAML contains expected content.
+	yamlStr := string(yamlContent)
+	assert.Contains(t, yamlStr, "syntax:")
+	assert.Contains(t, yamlStr, "name: export-e2e")
+	assert.Contains(t, yamlStr, "trade.fee")
+	assert.Contains(t, yamlStr, "trade.currency")
+
+	// 3. Import identical YAML → should get AlreadyExists.
+	_, err = schemaSvc.ImportSchema(ctx, &pb.ImportSchemaRequest{YamlContent: yamlContent})
+	require.Error(t, err)
+	assert.Equal(t, codes.AlreadyExists, status.Code(err))
+
+	// 4. Modify YAML — add a field, re-import.
+	modified := bytes.Replace(yamlContent,
+		[]byte("    trade.timeout:"),
+		[]byte("    trade.max_retries:\n        type: int\n    trade.timeout:"),
+		1,
+	)
+	importResp, err := schemaSvc.ImportSchema(ctx, &pb.ImportSchemaRequest{YamlContent: modified})
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), importResp.Schema.Version)
+	assert.Len(t, importResp.Schema.Fields, 4)
+	assert.False(t, importResp.Schema.Published, "imported schema should be a draft")
+
+	// 5. Verify via GetSchema that v2 exists.
+	getResp, err := schemaSvc.GetSchema(ctx, &pb.GetSchemaRequest{Id: schemaID})
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), getResp.Schema.Version)
+
+	// 6. Import new schema by name that doesn't exist yet.
+	newYAML := []byte(`syntax: "v1"
+name: brand-new-e2e
+description: Created via import
+fields:
+  config.enabled:
+    type: string
+    default: "true"
+`)
+	newImportResp, err := schemaSvc.ImportSchema(ctx, &pb.ImportSchemaRequest{YamlContent: newYAML})
+	require.NoError(t, err)
+	assert.Equal(t, "brand-new-e2e", newImportResp.Schema.Name)
+	assert.Equal(t, int32(1), newImportResp.Schema.Version)
+
+	// Cleanup.
+	_, _ = schemaSvc.DeleteSchema(ctx, &pb.DeleteSchemaRequest{Id: schemaID})
+	_, _ = schemaSvc.DeleteSchema(ctx, &pb.DeleteSchemaRequest{Id: newImportResp.Schema.Id})
 }

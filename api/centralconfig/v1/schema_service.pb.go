@@ -22,10 +22,14 @@ const (
 )
 
 type CreateSchemaRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Fields        []*SchemaField         `protobuf:"bytes,3,rep,name=fields,proto3" json:"fields,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique name for the schema. Must be a valid slug: lowercase alphanumeric
+	// and hyphens, 1-63 characters (e.g. "payment-config", "settlement-rules").
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Human-readable description of the schema's purpose.
+	Description *string `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	// Initial field definitions for version 1. At least one field is required.
+	Fields        []*SchemaField `protobuf:"bytes,3,rep,name=fields,proto3" json:"fields,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -82,8 +86,9 @@ func (x *CreateSchemaRequest) GetFields() []*SchemaField {
 }
 
 type CreateSchemaResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Schema        *Schema                `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The created schema with version 1 (draft, unpublished).
+	Schema        *Schema `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -127,8 +132,9 @@ func (x *CreateSchemaResponse) GetSchema() *Schema {
 
 type GetSchemaRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// If omitted, returns the latest version.
+	// Schema ID (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Schema version to retrieve. If omitted, returns the latest version.
 	Version       *int32 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -223,10 +229,13 @@ func (x *GetSchemaResponse) GetSchema() *Schema {
 }
 
 type ListSchemasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NameFilter    *string                `protobuf:"bytes,1,opt,name=name_filter,json=nameFilter,proto3,oneof" json:"name_filter,omitempty"`
-	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Filter schemas by name prefix. Currently reserved for future use.
+	NameFilter *string `protobuf:"bytes,1,opt,name=name_filter,json=nameFilter,proto3,oneof" json:"name_filter,omitempty"`
+	// Maximum number of results to return. Defaults to 50, max 100.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Pagination token from a previous ListSchemasResponse.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -283,9 +292,11 @@ func (x *ListSchemasRequest) GetPageToken() string {
 }
 
 type ListSchemasResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Schemas       []*Schema              `protobuf:"bytes,1,rep,name=schemas,proto3" json:"schemas,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Schemas with their latest version.
+	Schemas []*Schema `protobuf:"bytes,1,rep,name=schemas,proto3" json:"schemas,omitempty"`
+	// Token for the next page. Empty if no more results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -336,12 +347,14 @@ func (x *ListSchemasResponse) GetNextPageToken() string {
 
 type UpdateSchemaRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Description for this schema version.
+	// Schema ID (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Description of what changed in this version.
 	VersionDescription *string `protobuf:"bytes,2,opt,name=version_description,json=versionDescription,proto3,oneof" json:"version_description,omitempty"`
-	// Fields to add or modify. Existing fields not listed are unchanged.
+	// Fields to add or modify. Existing fields not listed here are carried
+	// forward unchanged from the latest version.
 	Fields []*SchemaField `protobuf:"bytes,3,rep,name=fields,proto3" json:"fields,omitempty"`
-	// Field paths to remove.
+	// Dot-separated paths of fields to remove from the new version.
 	RemoveFields  []string `protobuf:"bytes,4,rep,name=remove_fields,json=removeFields,proto3" json:"remove_fields,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -406,8 +419,9 @@ func (x *UpdateSchemaRequest) GetRemoveFields() []string {
 }
 
 type UpdateSchemaResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Schema        *Schema                `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The new schema version (draft, unpublished).
+	Schema        *Schema `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -450,8 +464,9 @@ func (x *UpdateSchemaResponse) GetSchema() *Schema {
 }
 
 type DeleteSchemaRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Schema ID (UUID). Cascades to all versions, fields, and associated tenants.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -530,9 +545,12 @@ func (*DeleteSchemaResponse) Descriptor() ([]byte, []int) {
 }
 
 type PublishSchemaRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Version       int32                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Schema ID (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The version number to publish. Must be an existing draft version.
+	// Once published, the version is immutable.
+	Version       int32 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -582,8 +600,9 @@ func (x *PublishSchemaRequest) GetVersion() int32 {
 }
 
 type PublishSchemaResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Schema        *Schema                `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The published schema version.
+	Schema        *Schema `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -626,10 +645,14 @@ func (x *PublishSchemaResponse) GetSchema() *Schema {
 }
 
 type CreateTenantRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	SchemaId      string                 `protobuf:"bytes,2,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
-	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique name for the tenant. Must be a valid slug: lowercase alphanumeric
+	// and hyphens, 1-63 characters (e.g. "acme-corp", "tenant-42").
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// The schema to assign to this tenant (UUID).
+	SchemaId string `protobuf:"bytes,2,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
+	// The schema version to use. Must be a published version.
+	SchemaVersion int32 `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -730,8 +753,9 @@ func (x *CreateTenantResponse) GetTenant() *Tenant {
 }
 
 type GetTenantRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -818,10 +842,13 @@ func (x *GetTenantResponse) GetTenant() *Tenant {
 }
 
 type ListTenantsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SchemaId      *string                `protobuf:"bytes,1,opt,name=schema_id,json=schemaId,proto3,oneof" json:"schema_id,omitempty"`
-	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Filter by schema ID (UUID). If omitted, returns tenants across all schemas.
+	SchemaId *string `protobuf:"bytes,1,opt,name=schema_id,json=schemaId,proto3,oneof" json:"schema_id,omitempty"`
+	// Maximum number of results to return. Defaults to 50, max 100.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Pagination token from a previous ListTenantsResponse.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -878,9 +905,10 @@ func (x *ListTenantsRequest) GetPageToken() string {
 }
 
 type ListTenantsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tenants       []*Tenant              `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Tenants []*Tenant              `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
+	// Token for the next page. Empty if no more results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -931,9 +959,12 @@ func (x *ListTenantsResponse) GetNextPageToken() string {
 
 type UpdateTenantRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name  *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	// Upgrade to a new schema version.
+	// Tenant ID (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// New name for the tenant. Must be a valid slug if provided.
+	Name *string `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	// Upgrade to a new schema version. The new version must belong to the
+	// same schema and must be published.
 	SchemaVersion *int32 `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3,oneof" json:"schema_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1035,8 +1066,9 @@ func (x *UpdateTenantResponse) GetTenant() *Tenant {
 }
 
 type DeleteTenantRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID). Cascades to all config versions, values, and field locks.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1115,10 +1147,13 @@ func (*DeleteTenantResponse) Descriptor() ([]byte, []int) {
 }
 
 type LockFieldRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPath string                 `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	// For enum fields: specific values to lock.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Dot-separated field path to lock (e.g. "payments.currency").
+	FieldPath string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// For enum fields: lock only these specific values. If empty, the
+	// entire field is locked regardless of value.
 	LockedValues  []string `protobuf:"bytes,3,rep,name=locked_values,json=lockedValues,proto3" json:"locked_values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1212,9 +1247,11 @@ func (*LockFieldResponse) Descriptor() ([]byte, []int) {
 }
 
 type UnlockFieldRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FieldPath     string                 `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Dot-separated field path to unlock.
+	FieldPath     string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1300,8 +1337,9 @@ func (*UnlockFieldResponse) Descriptor() ([]byte, []int) {
 }
 
 type ListFieldLocksRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant ID (UUID).
+	TenantId      string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1344,8 +1382,9 @@ func (x *ListFieldLocksRequest) GetTenantId() string {
 }
 
 type ListFieldLocksResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Locks         []*FieldLock           `protobuf:"bytes,1,rep,name=locks,proto3" json:"locks,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// All active field locks for the tenant.
+	Locks         []*FieldLock `protobuf:"bytes,1,rep,name=locks,proto3" json:"locks,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1388,9 +1427,11 @@ func (x *ListFieldLocksResponse) GetLocks() []*FieldLock {
 }
 
 type ExportSchemaRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Version       *int32                 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Schema ID (UUID).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Schema version to export. If omitted, exports the latest version.
+	Version       *int32 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1441,7 +1482,9 @@ func (x *ExportSchemaRequest) GetVersion() int32 {
 
 type ExportSchemaResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// YAML-encoded schema.
+	// YAML-encoded schema (syntax v1). Includes schema name, description,
+	// version, and all field definitions with OAS-style constraint naming.
+	// Server-generated fields (id, checksum, published, created_at) are excluded.
 	YamlContent   []byte `protobuf:"bytes,1,opt,name=yaml_content,json=yamlContent,proto3" json:"yaml_content,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1486,7 +1529,16 @@ func (x *ExportSchemaResponse) GetYamlContent() []byte {
 
 type ImportSchemaRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// YAML-encoded schema.
+	// YAML-encoded schema (syntax v1). Must include `syntax`, `name`, and `fields`.
+	//
+	// Import uses full-replace semantics:
+	// - If no schema with this name exists: creates a new schema with version 1.
+	// - If a schema exists and fields differ from latest: creates the next version.
+	// - If a schema exists and fields are identical: returns AlreadyExists error.
+	//
+	// Imported versions are always created as drafts (unpublished).
+	// The `version` field in the YAML is informational — the server assigns
+	// the next version number automatically.
 	YamlContent   []byte `protobuf:"bytes,1,opt,name=yaml_content,json=yamlContent,proto3" json:"yaml_content,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1530,8 +1582,9 @@ func (x *ImportSchemaRequest) GetYamlContent() []byte {
 }
 
 type ImportSchemaResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Schema        *Schema                `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The created (or existing, on AlreadyExists) schema version.
+	Schema        *Schema `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

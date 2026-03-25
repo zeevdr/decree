@@ -32,6 +32,10 @@ func (s *PGStore) GetSchemaByID(ctx context.Context, id pgUUID) (dbstore.Schema,
 	return s.read.GetSchemaByID(ctx, id)
 }
 
+func (s *PGStore) GetSchemaByName(ctx context.Context, name string) (dbstore.Schema, error) {
+	return s.read.GetSchemaByName(ctx, name)
+}
+
 func (s *PGStore) ListSchemas(ctx context.Context, arg dbstore.ListSchemasParams) ([]dbstore.Schema, error) {
 	return s.read.ListSchemas(ctx, arg)
 }
