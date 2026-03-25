@@ -54,7 +54,7 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] Convert helper tests — UUID roundtrip, checksum determinism/order-independence, field type roundtrip, ptrString
 - [x] Mock stores using testify/mock for schema, config, cache, pubsub
 - [x] `auth.ContextWithClaims()` helper for injecting claims in tests
-- [ ] Auth interceptor tests — deferred (requires test JWT key generation)
+- [x] Auth interceptor tests — 20 tests: valid/expired/wrong-key tokens, health bypass, missing/bad auth headers, issuer validation, role validation, tenant_id enforcement, stream interceptor, ClaimsFromContext roundtrip
 
 ### Phase 5: Polish
 
