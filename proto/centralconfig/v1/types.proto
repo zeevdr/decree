@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package centralconfig.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// FieldType enumerates the supported configuration value types.
+enum FieldType {
+  FIELD_TYPE_UNSPECIFIED = 0;
+  FIELD_TYPE_INT = 1;
+  FIELD_TYPE_STRING = 2;
+  FIELD_TYPE_TIME = 3;
+  FIELD_TYPE_DURATION = 4;
+  FIELD_TYPE_URL = 5;
+  FIELD_TYPE_JSON = 6;
+}
+
+// FieldConstraints defines validation rules for a schema field.
+message FieldConstraints {
+  // For int: min/max value. For string: min/max length.
+  optional int64 min = 1;
+  optional int64 max = 2;
+
+  // Regex pattern (string fields).
+  optional string regex = 3;
+
+  // Allowed values (enum).
+  repeated string enum_values = 4;
+
+  // JSON Schema for json-typed fields.
+  optional string json_schema = 5;
+}
+
+// SchemaField defines a single field within a schema.
+message SchemaField {
+  // Dot-separated hierarchical path, e.g. "payments.settlement.window".
+  string path = 1;
+
+  FieldType type = 2;
+  FieldConstraints constraints = 3;
+  bool nullable = 4;
+  bool deprecated = 5;
+
+  // If deprecated, reads of this field redirect to this path.
+  optional string redirect_to = 6;
+
+  // Default value (encoded as string).
+  optional string default_value = 7;
+
+  // Human-readable description of the field.
+  optional string description = 8;
+}
+
+// Schema represents a configuration schema template.
+message Schema {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 version = 4;
+  optional int32 parent_version = 5;
+  string version_description = 6;
+  string checksum = 7;
+  bool published = 8;
+  repeated SchemaField fields = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+// Tenant represents a tenant with an assigned schema.
+message Tenant {
+  string id = 1;
+  string name = 2;
+  string schema_id = 3;
+  int32 schema_version = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// FieldLock represents a locked field for a tenant.
+message FieldLock {
+  string tenant_id = 1;
+  string field_path = 2;
+
+  // For enum fields: the subset of values locked (not editable by admin).
+  repeated string locked_values = 3;
+}
+
+// ConfigValue represents a single configuration value.
+message ConfigValue {
+  string field_path = 1;
+  string value = 2;
+  string checksum = 3;
+  // Human-readable description explaining the specific value.
+  optional string description = 4;
+}
+
+// ConfigVersion represents a point-in-time snapshot of config values.
+message ConfigVersion {
+  string id = 1;
+  string tenant_id = 2;
+  int32 version = 3;
+  string description = 4;
+  string created_by = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// Config represents the full configuration for a tenant at a version.
+message Config {
+  string tenant_id = 1;
+  int32 version = 2;
+  repeated ConfigValue values = 3;
+}
+
+// ConfigChange represents a change event pushed to subscribers.
+message ConfigChange {
+  string tenant_id = 1;
+  int32 version = 2;
+  string field_path = 3;
+  string old_value = 4;
+  string new_value = 5;
+  string changed_by = 6;
+  google.protobuf.Timestamp changed_at = 7;
+}
+
+// AuditEntry represents a write event in the audit log.
+message AuditEntry {
+  string id = 1;
+  string tenant_id = 2;
+  string actor = 3;
+  string action = 4;
+  optional string field_path = 5;
+  optional string old_value = 6;
+  optional string new_value = 7;
+  optional int32 config_version = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+// UsageStats represents read usage statistics for a field.
+message UsageStats {
+  string tenant_id = 1;
+  string field_path = 2;
+  int64 read_count = 3;
+  optional string last_read_by = 4;
+  optional google.protobuf.Timestamp last_read_at = 5;
+}

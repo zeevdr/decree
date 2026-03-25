@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package centralconfig.v1;
+
+import "centralconfig/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+// AuditService provides access to change history and usage statistics.
+service AuditService {
+  // Query write events (config changes).
+  rpc QueryWriteLog(QueryWriteLogRequest) returns (QueryWriteLogResponse);
+
+  // Query read usage statistics.
+  rpc GetFieldUsage(GetFieldUsageRequest) returns (GetFieldUsageResponse);
+  rpc GetTenantUsage(GetTenantUsageRequest) returns (GetTenantUsageResponse);
+  rpc GetUnusedFields(GetUnusedFieldsRequest) returns (GetUnusedFieldsResponse);
+}
+
+// --- Write log queries ---
+
+message QueryWriteLogRequest {
+  optional string tenant_id = 1;
+  optional string actor = 2;
+  optional string field_path = 3;
+  optional google.protobuf.Timestamp start_time = 4;
+  optional google.protobuf.Timestamp end_time = 5;
+  int32 page_size = 6;
+  string page_token = 7;
+}
+
+message QueryWriteLogResponse {
+  repeated AuditEntry entries = 1;
+  string next_page_token = 2;
+}
+
+// --- Usage queries ---
+
+message GetFieldUsageRequest {
+  string tenant_id = 1;
+  string field_path = 2;
+  optional google.protobuf.Timestamp start_time = 3;
+  optional google.protobuf.Timestamp end_time = 4;
+}
+
+message GetFieldUsageResponse {
+  UsageStats stats = 1;
+}
+
+message GetTenantUsageRequest {
+  string tenant_id = 1;
+  optional google.protobuf.Timestamp start_time = 2;
+  optional google.protobuf.Timestamp end_time = 3;
+}
+
+message GetTenantUsageResponse {
+  repeated UsageStats field_stats = 1;
+}
+
+message GetUnusedFieldsRequest {
+  string tenant_id = 1;
+  // Fields not read since this time are considered unused.
+  google.protobuf.Timestamp since = 2;
+}
+
+message GetUnusedFieldsResponse {
+  repeated string field_paths = 1;
+}

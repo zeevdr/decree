@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+package centralconfig.v1;
+
+import "centralconfig/v1/types.proto";
+
+// SchemaService manages configuration schemas and tenants.
+service SchemaService {
+  // Schema operations.
+  rpc CreateSchema(CreateSchemaRequest) returns (CreateSchemaResponse);
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+  rpc ListSchemas(ListSchemasRequest) returns (ListSchemasResponse);
+  rpc UpdateSchema(UpdateSchemaRequest) returns (UpdateSchemaResponse);
+  rpc DeleteSchema(DeleteSchemaRequest) returns (DeleteSchemaResponse);
+  rpc PublishSchema(PublishSchemaRequest) returns (PublishSchemaResponse);
+
+  // Tenant operations.
+  rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
+  rpc UpdateTenant(UpdateTenantRequest) returns (UpdateTenantResponse);
+  rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
+
+  // Field locking.
+  rpc LockField(LockFieldRequest) returns (LockFieldResponse);
+  rpc UnlockField(UnlockFieldRequest) returns (UnlockFieldResponse);
+  rpc ListFieldLocks(ListFieldLocksRequest) returns (ListFieldLocksResponse);
+
+  // Import/export.
+  rpc ExportSchema(ExportSchemaRequest) returns (ExportSchemaResponse);
+  rpc ImportSchema(ImportSchemaRequest) returns (ImportSchemaResponse);
+}
+
+// --- Schema requests/responses ---
+
+message CreateSchemaRequest {
+  string name = 1;
+  optional string description = 2;
+  repeated SchemaField fields = 3;
+}
+
+message CreateSchemaResponse {
+  Schema schema = 1;
+}
+
+message GetSchemaRequest {
+  string id = 1;
+  // If omitted, returns the latest version.
+  optional int32 version = 2;
+}
+
+message GetSchemaResponse {
+  Schema schema = 1;
+}
+
+message ListSchemasRequest {
+  optional string name_filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListSchemasResponse {
+  repeated Schema schemas = 1;
+  string next_page_token = 2;
+}
+
+message UpdateSchemaRequest {
+  string id = 1;
+  // Description for this schema version.
+  optional string version_description = 2;
+  // Fields to add or modify. Existing fields not listed are unchanged.
+  repeated SchemaField fields = 3;
+  // Field paths to remove.
+  repeated string remove_fields = 4;
+}
+
+message UpdateSchemaResponse {
+  Schema schema = 1;
+}
+
+message DeleteSchemaRequest {
+  string id = 1;
+}
+
+message DeleteSchemaResponse {}
+
+message PublishSchemaRequest {
+  string id = 1;
+  int32 version = 2;
+}
+
+message PublishSchemaResponse {
+  Schema schema = 1;
+}
+
+// --- Tenant requests/responses ---
+
+message CreateTenantRequest {
+  string name = 1;
+  string schema_id = 2;
+  int32 schema_version = 3;
+}
+
+message CreateTenantResponse {
+  Tenant tenant = 1;
+}
+
+message GetTenantRequest {
+  string id = 1;
+}
+
+message GetTenantResponse {
+  Tenant tenant = 1;
+}
+
+message ListTenantsRequest {
+  optional string schema_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListTenantsResponse {
+  repeated Tenant tenants = 1;
+  string next_page_token = 2;
+}
+
+message UpdateTenantRequest {
+  string id = 1;
+  optional string name = 2;
+  // Upgrade to a new schema version.
+  optional int32 schema_version = 3;
+}
+
+message UpdateTenantResponse {
+  Tenant tenant = 1;
+}
+
+message DeleteTenantRequest {
+  string id = 1;
+}
+
+message DeleteTenantResponse {}
+
+// --- Field lock requests/responses ---
+
+message LockFieldRequest {
+  string tenant_id = 1;
+  string field_path = 2;
+  // For enum fields: specific values to lock.
+  repeated string locked_values = 3;
+}
+
+message LockFieldResponse {}
+
+message UnlockFieldRequest {
+  string tenant_id = 1;
+  string field_path = 2;
+}
+
+message UnlockFieldResponse {}
+
+message ListFieldLocksRequest {
+  string tenant_id = 1;
+}
+
+message ListFieldLocksResponse {
+  repeated FieldLock locks = 1;
+}
+
+// --- Import/export ---
+
+message ExportSchemaRequest {
+  string id = 1;
+  optional int32 version = 2;
+}
+
+message ExportSchemaResponse {
+  // YAML-encoded schema.
+  bytes yaml_content = 1;
+}
+
+message ImportSchemaRequest {
+  // YAML-encoded schema.
+  bytes yaml_content = 1;
+}
+
+message ImportSchemaResponse {
+  Schema schema = 1;
+}

@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package centralconfig.v1;
+
+import "centralconfig/v1/types.proto";
+
+// ConfigService manages configuration values, versions, and subscriptions.
+service ConfigService {
+  // Read operations.
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  rpc GetField(GetFieldRequest) returns (GetFieldResponse);
+  rpc GetFields(GetFieldsRequest) returns (GetFieldsResponse);
+
+  // Write operations.
+  rpc SetField(SetFieldRequest) returns (SetFieldResponse);
+  rpc SetFields(SetFieldsRequest) returns (SetFieldsResponse);
+
+  // Version operations.
+  rpc ListVersions(ListVersionsRequest) returns (ListVersionsResponse);
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+  rpc RollbackToVersion(RollbackToVersionRequest) returns (RollbackToVersionResponse);
+
+  // Subscriptions.
+  rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse);
+
+  // Import/export.
+  rpc ExportConfig(ExportConfigRequest) returns (ExportConfigResponse);
+  rpc ImportConfig(ImportConfigRequest) returns (ImportConfigResponse);
+}
+
+// --- Read requests/responses ---
+
+message GetConfigRequest {
+  string tenant_id = 1;
+  // If omitted, returns the latest version.
+  optional int32 version = 2;
+  // When true, includes value descriptions (bypasses cache, hits DB).
+  bool include_descriptions = 3;
+}
+
+message GetConfigResponse {
+  Config config = 1;
+}
+
+message GetFieldRequest {
+  string tenant_id = 1;
+  string field_path = 2;
+  optional int32 version = 3;
+  // When true, includes value description (bypasses cache, hits DB).
+  bool include_description = 4;
+}
+
+message GetFieldResponse {
+  ConfigValue value = 1;
+}
+
+message GetFieldsRequest {
+  string tenant_id = 1;
+  repeated string field_paths = 2;
+  optional int32 version = 3;
+  // When true, includes value descriptions (bypasses cache, hits DB).
+  bool include_descriptions = 4;
+}
+
+message GetFieldsResponse {
+  repeated ConfigValue values = 1;
+}
+
+// --- Write requests/responses ---
+
+message SetFieldRequest {
+  string tenant_id = 1;
+  string field_path = 2;
+  string value = 3;
+  // Optimistic concurrency: checksum from a previous read.
+  optional string expected_checksum = 4;
+  // Version-level description explaining the change.
+  optional string description = 5;
+  // Value-level description explaining this specific value.
+  optional string value_description = 6;
+}
+
+message SetFieldResponse {
+  ConfigVersion config_version = 1;
+}
+
+message SetFieldsRequest {
+  string tenant_id = 1;
+  repeated FieldUpdate updates = 2;
+  optional string description = 3;
+}
+
+message SetFieldsResponse {
+  ConfigVersion config_version = 1;
+}
+
+message FieldUpdate {
+  string field_path = 1;
+  string value = 2;
+  optional string expected_checksum = 3;
+  // Value-level description explaining this specific value.
+  optional string value_description = 4;
+}
+
+// --- Version requests/responses ---
+
+message ListVersionsRequest {
+  string tenant_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListVersionsResponse {
+  repeated ConfigVersion versions = 1;
+  string next_page_token = 2;
+}
+
+message GetVersionRequest {
+  string tenant_id = 1;
+  int32 version = 2;
+}
+
+message GetVersionResponse {
+  ConfigVersion config_version = 1;
+}
+
+message RollbackToVersionRequest {
+  string tenant_id = 1;
+  int32 version = 2;
+  optional string description = 3;
+}
+
+message RollbackToVersionResponse {
+  ConfigVersion config_version = 1;
+}
+
+// --- Subscription ---
+
+message SubscribeRequest {
+  string tenant_id = 1;
+  // If empty, subscribes to all fields.
+  repeated string field_paths = 2;
+}
+
+message SubscribeResponse {
+  ConfigChange change = 1;
+}
+
+// --- Import/export ---
+
+message ExportConfigRequest {
+  string tenant_id = 1;
+  optional int32 version = 2;
+}
+
+message ExportConfigResponse {
+  // YAML-encoded configuration values.
+  bytes yaml_content = 1;
+}
+
+message ImportConfigRequest {
+  string tenant_id = 1;
+  // YAML-encoded configuration values.
+  bytes yaml_content = 2;
+  optional string description = 3;
+}
+
+message ImportConfigResponse {
+  ConfigVersion config_version = 1;
+}

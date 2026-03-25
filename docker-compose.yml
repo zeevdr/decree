@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: centralconfig
+      POSTGRES_USER: centralconfig
+      POSTGRES_PASSWORD: localdev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  service:
+    build:
+      context: .
+      dockerfile: build/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      GRPC_PORT: "9090"
+      DB_WRITE_URL: "postgres://centralconfig:localdev@postgres:5432/centralconfig?sslmode=disable"
+      DB_READ_URL: "postgres://centralconfig:localdev@postgres:5432/centralconfig?sslmode=disable"
+      REDIS_URL: "redis://redis:6379"
+      ENABLE_SERVICES: "schema,config,audit"
+    ports:
+      - "9090:9090"
+
+volumes:
+  pgdata:

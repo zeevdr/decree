@@ -1,0 +1,16 @@
+FROM golang:1.25-bookworm
+
+# Install buf
+RUN go install github.com/bufbuild/buf/cmd/buf@v1.66.1
+
+# Install protoc Go plugins
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11 && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.1
+
+# Install sqlc
+RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
+
+# Install goose
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.27.0
+
+WORKDIR /workspace
