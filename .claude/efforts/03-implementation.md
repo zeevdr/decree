@@ -56,7 +56,8 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] Convert helper tests — UUID roundtrip, checksum determinism/order-independence, field type roundtrip, ptrString
 - [x] Mock stores using testify/mock for schema, config, cache, pubsub
 - [x] `auth.ContextWithClaims()` helper for injecting claims in tests
-- [x] Auth interceptor tests — 20 tests: valid/expired/wrong-key tokens, health bypass, missing/bad auth headers, issuer validation, role validation, tenant_id enforcement, stream interceptor, ClaimsFromContext roundtrip
+- [x] Auth interceptor tests — 20 JWT tests: valid/expired/wrong-key tokens, health bypass, missing/bad auth headers, issuer validation, role validation, tenant_id enforcement, stream interceptor, ClaimsFromContext roundtrip
+- [x] Metadata interceptor tests — 11 tests: valid superadmin, default role, admin/user with tenant, missing subject, no metadata, unknown role, admin/user missing tenant, health bypass, stream interceptor
 
 ### Phase 5: Polish
 
@@ -83,3 +84,5 @@ Core infrastructure — everything needed before implementing business logic.
 10. **Field type system** — OAS-aligned: `integer` (INT), `number` (float), `string`, `bool`, `time`, `duration`, `url`, `json`. DB uses PG enum. Constraints min/max are `double` to support float ranges.
 11. **Config YAML typed values** — export converts string values to native YAML types (int→number, bool→boolean, json→map) using schema field type info. Import reverses the conversion. Both directions require schema lookup.
 12. **Lint zero issues** — fixed all pre-existing golangci-lint issues; gofumpt moved from linters to formatters-only in `.golangci.yml`.
+13. **Metadata auth (default)** — JWT is opt-in (`JWT_JWKS_URL`). Default mode reads `x-subject` (required), `x-role` (defaults superadmin), `x-tenant-id` from gRPC metadata headers. Same `Claims` in context either way.
+14. **Docker build cache** — `--mount=type=cache` on `/go/pkg/mod` and `/root/.cache/go-build` in both Dockerfiles. Tools image rebuild drops from ~220s to ~1s.

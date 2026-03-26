@@ -123,7 +123,7 @@ func TestClaimsFromContext_Missing(t *testing.T) {
 // --- UnaryInterceptor ---
 
 // noopHandler is a gRPC unary handler that returns a fixed response.
-func noopHandler(ctx context.Context, req any) (any, error) {
+func noopHandler(_ context.Context, _ any) (any, error) {
 	return "ok", nil
 }
 
@@ -255,7 +255,7 @@ func TestUnaryInterceptor_UnknownRole(t *testing.T) {
 	interceptor := newTestInterceptor(t, "")
 	unary := interceptor.UnaryInterceptor()
 
-	claims := validClaims(Role("editor"), "tenant-1")
+	claims := validClaims("editor", "tenant-1")
 	ctx := ctxWithBearer(signToken(t, claims))
 
 	_, err := unary(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}, noopHandler)

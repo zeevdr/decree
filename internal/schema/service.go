@@ -508,6 +508,9 @@ func (s *Service) ExportSchema(ctx context.Context, req *pb.ExportSchemaRequest)
 	if err != nil {
 		return nil, err // Already a gRPC status error.
 	}
+	if getResp == nil || getResp.Schema == nil {
+		return nil, status.Error(codes.Internal, "unexpected nil schema response")
+	}
 
 	doc := schemaToYAML(getResp.Schema)
 	data, err := marshalSchemaYAML(doc)
