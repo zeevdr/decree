@@ -22,6 +22,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	cfg := loadConfig()
 	logger := newLogger(cfg.LogLevel)
 
@@ -32,7 +36,7 @@ func main() {
 	db, err := storage.NewDB(ctx, cfg.DBWriteURL, cfg.DBReadURL)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to connect to database", "error", err)
-		os.Exit(1)
+		return 1
 	}
 	defer db.Close()
 	logger.InfoContext(ctx, "connected to database")
@@ -41,13 +45,13 @@ func main() {
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to parse redis url", "error", err)
-		os.Exit(1)
+		return 1
 	}
 	redisClient := redis.NewClient(redisOpts)
-	defer redisClient.Close()
+	defer func() { _ = redisClient.Close() }()
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		logger.ErrorContext(ctx, "failed to connect to redis", "error", err)
-		os.Exit(1)
+		return 1
 	}
 	logger.InfoContext(ctx, "connected to redis")
 
@@ -55,8 +59,8 @@ func main() {
 	configCache := cache.NewRedisCache(redisClient)
 	publisher := pubsub.NewRedisPublisher(redisClient)
 	subscriber := pubsub.NewRedisSubscriber(redisClient, logger)
-	defer publisher.Close()
-	defer subscriber.Close()
+	defer func() { _ = publisher.Close() }()
+	defer func() { _ = subscriber.Close() }()
 
 	// Auth interceptor.
 	var authInterceptor *auth.Interceptor
@@ -64,7 +68,7 @@ func main() {
 		authInterceptor, err = auth.NewInterceptor(ctx, cfg.JWTJWKSURL, cfg.JWTIssuer, logger)
 		if err != nil {
 			logger.ErrorContext(ctx, "failed to create auth interceptor", "error", err)
-			os.Exit(1)
+			return 1
 		}
 		defer authInterceptor.Close()
 		logger.InfoContext(ctx, "JWT auth enabled", "jwks_url", cfg.JWTJWKSURL)
@@ -81,7 +85,7 @@ func main() {
 	})
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create server", "error", err)
-		os.Exit(1)
+		return 1
 	}
 
 	// Register services.
@@ -127,6 +131,7 @@ func main() {
 	cancel()
 	srv.GracefulStop(ctx)
 	logger.InfoContext(ctx, "central-config-service stopped")
+	return 0
 }
 
 type serverConfig struct {

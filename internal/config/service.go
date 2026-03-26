@@ -530,11 +530,205 @@ func (s *Service) Subscribe(req *pb.SubscribeRequest, stream grpc.ServerStreamin
 // --- Import/export ---
 
 func (s *Service) ExportConfig(ctx context.Context, req *pb.ExportConfigRequest) (*pb.ExportConfigResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "export not yet implemented")
+	tenantID, err := parseUUID(req.TenantId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid tenant id")
+	}
+
+	version, err := s.resolveVersion(ctx, tenantID, req.Version)
+	if err != nil {
+		return nil, err
+	}
+	if version == 0 {
+		return nil, status.Error(codes.NotFound, "no config versions exist for this tenant")
+	}
+
+	// Get schema field types for typed value conversion.
+	fieldTypes, err := s.getFieldTypeMap(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch all config values at the requested version.
+	dbRows, err := s.store.GetFullConfigAtVersion(ctx, dbstore.GetFullConfigAtVersionParams{
+		TenantID: tenantID,
+		Version:  version,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to get config values")
+	}
+	if len(dbRows) == 0 {
+		return nil, status.Error(codes.NotFound, "no config values at this version")
+	}
+
+	rows := make([]configRow, len(dbRows))
+	for i, r := range dbRows {
+		rows[i] = configRow{FieldPath: r.FieldPath, Value: r.Value, Description: r.Description}
+	}
+
+	// Get version description.
+	var description string
+	cv, err := s.store.GetConfigVersion(ctx, dbstore.GetConfigVersionParams{
+		TenantID: tenantID,
+		Version:  version,
+	})
+	if err == nil && cv.Description != nil {
+		description = *cv.Description
+	}
+
+	doc := configToYAML(version, description, rows, fieldTypes)
+	data, err := marshalConfigYAML(doc)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to marshal YAML")
+	}
+
+	return &pb.ExportConfigResponse{YamlContent: data}, nil
 }
 
 func (s *Service) ImportConfig(ctx context.Context, req *pb.ImportConfigRequest) (*pb.ImportConfigResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "import not yet implemented")
+	tenantID, err := parseUUID(req.TenantId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid tenant id")
+	}
+
+	doc, err := unmarshalConfigYAML(req.YamlContent)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid config YAML: %v", err)
+	}
+
+	actor := s.getActor(ctx)
+
+	// Verify tenant exists.
+	if _, err := s.store.GetTenantByID(ctx, tenantID); err != nil {
+		return nil, status.Error(codes.NotFound, "tenant not found")
+	}
+
+	// Get schema field types for type-aware conversion.
+	fieldTypes, err := s.getFieldTypeMap(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert YAML values to string representations.
+	values, err := yamlToConfigValues(doc, fieldTypes)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "value conversion error: %v", err)
+	}
+
+	// Check field locks.
+	for _, v := range values {
+		if err := s.checkFieldLock(ctx, tenantID, v.FieldPath); err != nil {
+			return nil, err
+		}
+	}
+
+	latestVersion, err := s.getOrCreateVersion(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect old values for audit and change events.
+	type changeRecord struct {
+		fieldPath string
+		oldValue  string
+		newValue  string
+	}
+	changes := make([]changeRecord, 0, len(values))
+	for _, v := range values {
+		changes = append(changes, changeRecord{
+			fieldPath: v.FieldPath,
+			oldValue:  s.getCurrentValue(ctx, tenantID, v.FieldPath, latestVersion),
+			newValue:  v.Value,
+		})
+	}
+
+	// Import description.
+	desc := "Import from YAML"
+	if req.Description != nil {
+		desc = *req.Description
+	} else if doc.Description != "" {
+		desc = doc.Description
+	}
+
+	// Transaction: version + all values + audit entries.
+	var newVersion dbstore.ConfigVersion
+	if err := s.store.RunInTx(ctx, func(tx Store) error {
+		var txErr error
+		newVersion, txErr = tx.CreateConfigVersion(ctx, dbstore.CreateConfigVersionParams{
+			TenantID:    tenantID,
+			Version:     latestVersion + 1,
+			Description: &desc,
+			CreatedBy:   actor,
+		})
+		if txErr != nil {
+			return fmt.Errorf("create config version: %w", txErr)
+		}
+
+		for i, v := range values {
+			if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
+				ConfigVersionID: newVersion.ID,
+				FieldPath:       v.FieldPath,
+				Value:           v.Value,
+				Description:     v.Description,
+			}); txErr != nil {
+				return fmt.Errorf("set config value %s: %w", v.FieldPath, txErr)
+			}
+
+			if txErr = tx.InsertAuditWriteLog(ctx, dbstore.InsertAuditWriteLogParams{
+				TenantID:      tenantID,
+				Actor:         actor,
+				Action:        "import",
+				FieldPath:     ptrString(v.FieldPath),
+				OldValue:      ptrString(changes[i].oldValue),
+				NewValue:      ptrString(v.Value),
+				ConfigVersion: &newVersion.Version,
+			}); txErr != nil {
+				return fmt.Errorf("insert audit log for %s: %w", v.FieldPath, txErr)
+			}
+		}
+
+		return nil
+	}); err != nil {
+		s.logger.ErrorContext(ctx, "import config transaction failed", "error", err)
+		return nil, status.Error(codes.Internal, "failed to import config")
+	}
+
+	// Post-transaction side effects.
+	if err := s.cache.Invalidate(ctx, req.TenantId); err != nil {
+		s.logger.WarnContext(ctx, "failed to invalidate cache", "error", err)
+	}
+	for _, ch := range changes {
+		s.publishChange(ctx, req.TenantId, newVersion.Version, ch.fieldPath, ch.oldValue, ch.newValue, actor)
+	}
+
+	return &pb.ImportConfigResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
+}
+
+// getFieldTypeMap fetches the tenant's schema fields and builds a map of field path to proto FieldType.
+func (s *Service) getFieldTypeMap(ctx context.Context, tenantID pgtype.UUID) (map[string]pb.FieldType, error) {
+	tenant, err := s.store.GetTenantByID(ctx, tenantID)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "tenant not found")
+	}
+
+	sv, err := s.store.GetSchemaVersion(ctx, dbstore.GetSchemaVersionParams{
+		SchemaID: tenant.SchemaID,
+		Version:  tenant.SchemaVersion,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to get schema version")
+	}
+
+	fields, err := s.store.GetSchemaFields(ctx, sv.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to get schema fields")
+	}
+
+	result := make(map[string]pb.FieldType, len(fields))
+	for _, f := range fields {
+		result[f.Path] = dbFieldTypeToProto(f.FieldType)
+	}
+	return result, nil
 }
 
 // --- Helpers ---
@@ -645,4 +839,3 @@ func (s *Service) publishChange(ctx context.Context, tenantID string, version in
 		s.logger.WarnContext(ctx, "failed to publish change event", "error", err)
 	}
 }
-

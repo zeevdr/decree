@@ -9,7 +9,7 @@ import "google/protobuf/timestamp.proto";
 // constraint interpretation.
 enum FieldType {
   FIELD_TYPE_UNSPECIFIED = 0;
-  // Integer value. Encoded as a decimal string (e.g. "42").
+  // Integer value. Encoded as a decimal string (e.g. "42", "-1").
   // Supports minimum/maximum constraints on the numeric value.
   FIELD_TYPE_INT = 1;
   // Free-form string value.
@@ -26,18 +26,23 @@ enum FieldType {
   // JSON value. Stored as a JSON-encoded string.
   // Supports json_schema constraint for structural validation.
   FIELD_TYPE_JSON = 6;
+  // Floating-point number value. Encoded as a decimal string (e.g. "3.14", "0.025").
+  // Supports minimum/maximum constraints on the numeric value.
+  FIELD_TYPE_NUMBER = 7;
+  // Boolean value. Encoded as "true" or "false".
+  FIELD_TYPE_BOOL = 8;
 }
 
 // FieldConstraints defines validation rules for a schema field.
 // Which constraints apply depends on the field's type — see FieldType docs.
 message FieldConstraints {
-  // For int/duration: minimum allowed value.
+  // For integer/number/duration: minimum allowed value.
   // For string: minimum allowed length.
-  optional int64 min = 1;
+  optional double min = 1;
 
-  // For int/duration: maximum allowed value.
+  // For integer/number/duration: maximum allowed value.
   // For string: maximum allowed length.
-  optional int64 max = 2;
+  optional double max = 2;
 
   // Regular expression pattern the value must match.
   // Applies to string-typed fields. Uses RE2 syntax.

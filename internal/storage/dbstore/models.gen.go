@@ -5,8 +5,59 @@
 package dbstore
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type FieldType string
+
+const (
+	FieldTypeInteger  FieldType = "integer"
+	FieldTypeNumber   FieldType = "number"
+	FieldTypeString   FieldType = "string"
+	FieldTypeBool     FieldType = "bool"
+	FieldTypeTime     FieldType = "time"
+	FieldTypeDuration FieldType = "duration"
+	FieldTypeUrl      FieldType = "url"
+	FieldTypeJson     FieldType = "json"
+)
+
+func (e *FieldType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FieldType(s)
+	case string:
+		*e = FieldType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FieldType: %T", src)
+	}
+	return nil
+}
+
+type NullFieldType struct {
+	FieldType FieldType `json:"field_type"`
+	Valid     bool      `json:"valid"` // Valid is true if FieldType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFieldType) Scan(value interface{}) error {
+	if value == nil {
+		ns.FieldType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FieldType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFieldType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FieldType), nil
+}
 
 type AuditWriteLog struct {
 	ID            pgtype.UUID        `json:"id"`
@@ -49,7 +100,7 @@ type SchemaField struct {
 	ID              pgtype.UUID `json:"id"`
 	SchemaVersionID pgtype.UUID `json:"schema_version_id"`
 	Path            string      `json:"path"`
-	FieldType       string      `json:"field_type"`
+	FieldType       FieldType   `json:"field_type"`
 	Constraints     []byte      `json:"constraints"`
 	Nullable        bool        `json:"nullable"`
 	Deprecated      bool        `json:"deprecated"`

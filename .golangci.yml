@@ -7,7 +7,6 @@ linters:
     - errname
     - errorlint
     - gocritic
-    - gofumpt
     - govet
     - nilerr
     - prealloc

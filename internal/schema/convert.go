@@ -39,13 +39,13 @@ func schemaToProto(s dbstore.Schema, v dbstore.SchemaVersion, fields []dbstore.S
 	}
 
 	result := &pb.Schema{
-		Id:                 uuidToString(s.ID),
-		Name:               s.Name,
-		Version:            v.Version,
-		Checksum:           v.Checksum,
-		Published:          v.Published,
-		Fields:             pbFields,
-		CreatedAt:          timestamppb.New(v.CreatedAt.Time),
+		Id:        uuidToString(s.ID),
+		Name:      s.Name,
+		Version:   v.Version,
+		Checksum:  v.Checksum,
+		Published: v.Published,
+		Fields:    pbFields,
+		CreatedAt: timestamppb.New(v.CreatedAt.Time),
 	}
 	if s.Description != nil {
 		result.Description = *s.Description
@@ -86,43 +86,51 @@ func fieldToProto(f dbstore.SchemaField) *pb.SchemaField {
 	return result
 }
 
-// fieldTypeToProto converts a string field type to proto enum.
-func fieldTypeToProto(t string) pb.FieldType {
+// fieldTypeToProto converts a DB field type to proto enum.
+func fieldTypeToProto(t dbstore.FieldType) pb.FieldType {
 	switch t {
-	case "int":
+	case dbstore.FieldTypeInteger:
 		return pb.FieldType_FIELD_TYPE_INT
-	case "string":
+	case dbstore.FieldTypeNumber:
+		return pb.FieldType_FIELD_TYPE_NUMBER
+	case dbstore.FieldTypeString:
 		return pb.FieldType_FIELD_TYPE_STRING
-	case "time":
+	case dbstore.FieldTypeBool:
+		return pb.FieldType_FIELD_TYPE_BOOL
+	case dbstore.FieldTypeTime:
 		return pb.FieldType_FIELD_TYPE_TIME
-	case "duration":
+	case dbstore.FieldTypeDuration:
 		return pb.FieldType_FIELD_TYPE_DURATION
-	case "url":
+	case dbstore.FieldTypeUrl:
 		return pb.FieldType_FIELD_TYPE_URL
-	case "json":
+	case dbstore.FieldTypeJson:
 		return pb.FieldType_FIELD_TYPE_JSON
 	default:
 		return pb.FieldType_FIELD_TYPE_UNSPECIFIED
 	}
 }
 
-// protoFieldType converts a proto enum to string for DB storage.
-func protoFieldType(t pb.FieldType) string {
+// protoFieldType converts a proto enum to DB field type.
+func protoFieldType(t pb.FieldType) dbstore.FieldType {
 	switch t {
 	case pb.FieldType_FIELD_TYPE_INT:
-		return "int"
+		return dbstore.FieldTypeInteger
+	case pb.FieldType_FIELD_TYPE_NUMBER:
+		return dbstore.FieldTypeNumber
 	case pb.FieldType_FIELD_TYPE_STRING:
-		return "string"
+		return dbstore.FieldTypeString
+	case pb.FieldType_FIELD_TYPE_BOOL:
+		return dbstore.FieldTypeBool
 	case pb.FieldType_FIELD_TYPE_TIME:
-		return "time"
+		return dbstore.FieldTypeTime
 	case pb.FieldType_FIELD_TYPE_DURATION:
-		return "duration"
+		return dbstore.FieldTypeDuration
 	case pb.FieldType_FIELD_TYPE_URL:
-		return "url"
+		return dbstore.FieldTypeUrl
 	case pb.FieldType_FIELD_TYPE_JSON:
-		return "json"
+		return dbstore.FieldTypeJson
 	default:
-		return "unspecified"
+		return dbstore.FieldTypeString
 	}
 }
 
@@ -164,7 +172,7 @@ func computeChecksum(fields []*pb.SchemaField) string {
 
 	h := sha256.New()
 	for _, f := range sorted {
-		fmt.Fprintf(h, "%s:%s:%v:%v", f.Path, f.Type.String(), f.Nullable, f.Deprecated)
+		_, _ = fmt.Fprintf(h, "%s:%s:%v:%v", f.Path, f.Type.String(), f.Nullable, f.Deprecated)
 		if f.Constraints != nil {
 			data, _ := json.Marshal(f.Constraints)
 			h.Write(data)

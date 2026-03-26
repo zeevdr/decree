@@ -12,11 +12,11 @@ const yamlSyntaxV1 = "v1"
 
 // SchemaYAML is the top-level YAML document for schema import/export.
 type SchemaYAML struct {
-	Syntax             string                    `yaml:"syntax"`
-	Name               string                    `yaml:"name"`
-	Description        string                    `yaml:"description,omitempty"`
-	Version            int32                     `yaml:"version,omitempty"`
-	VersionDescription string                    `yaml:"version_description,omitempty"`
+	Syntax             string                     `yaml:"syntax"`
+	Name               string                     `yaml:"name"`
+	Description        string                     `yaml:"description,omitempty"`
+	Version            int32                      `yaml:"version,omitempty"`
+	VersionDescription string                     `yaml:"version_description,omitempty"`
 	Fields             map[string]SchemaFieldYAML `yaml:"fields"`
 }
 
@@ -33,8 +33,8 @@ type SchemaFieldYAML struct {
 
 // ConstraintsYAML uses OAS-style naming for field constraints.
 type ConstraintsYAML struct {
-	Minimum    *int64   `yaml:"minimum,omitempty"`
-	Maximum    *int64   `yaml:"maximum,omitempty"`
+	Minimum    *float64 `yaml:"minimum,omitempty"`
+	Maximum    *float64 `yaml:"maximum,omitempty"`
 	Pattern    string   `yaml:"pattern,omitempty"`
 	Enum       []string `yaml:"enum,omitempty"`
 	JSONSchema string   `yaml:"json_schema,omitempty"`
@@ -73,10 +73,14 @@ func validateSchemaYAML(doc *SchemaYAML) error {
 
 func yamlTypeToProto(t string) (pb.FieldType, bool) {
 	switch t {
-	case "int":
+	case "integer":
 		return pb.FieldType_FIELD_TYPE_INT, true
+	case "number":
+		return pb.FieldType_FIELD_TYPE_NUMBER, true
 	case "string":
 		return pb.FieldType_FIELD_TYPE_STRING, true
+	case "bool":
+		return pb.FieldType_FIELD_TYPE_BOOL, true
 	case "time":
 		return pb.FieldType_FIELD_TYPE_TIME, true
 	case "duration":
@@ -93,9 +97,13 @@ func yamlTypeToProto(t string) (pb.FieldType, bool) {
 func protoTypeToYAML(t pb.FieldType) string {
 	switch t {
 	case pb.FieldType_FIELD_TYPE_INT:
-		return "int"
+		return "integer"
+	case pb.FieldType_FIELD_TYPE_NUMBER:
+		return "number"
 	case pb.FieldType_FIELD_TYPE_STRING:
 		return "string"
+	case pb.FieldType_FIELD_TYPE_BOOL:
+		return "bool"
 	case pb.FieldType_FIELD_TYPE_TIME:
 		return "time"
 	case pb.FieldType_FIELD_TYPE_DURATION:

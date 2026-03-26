@@ -62,7 +62,7 @@ func (s *RedisSubscriber) Subscribe(ctx context.Context, tenantID string) (<-cha
 
 	go func() {
 		defer close(ch)
-		defer sub.Close()
+		defer func() { _ = sub.Close() }()
 
 		msgCh := sub.Channel()
 		for {

@@ -29,7 +29,7 @@ type FieldType int32
 
 const (
 	FieldType_FIELD_TYPE_UNSPECIFIED FieldType = 0
-	// Integer value. Encoded as a decimal string (e.g. "42").
+	// Integer value. Encoded as a decimal string (e.g. "42", "-1").
 	// Supports minimum/maximum constraints on the numeric value.
 	FieldType_FIELD_TYPE_INT FieldType = 1
 	// Free-form string value.
@@ -46,6 +46,11 @@ const (
 	// JSON value. Stored as a JSON-encoded string.
 	// Supports json_schema constraint for structural validation.
 	FieldType_FIELD_TYPE_JSON FieldType = 6
+	// Floating-point number value. Encoded as a decimal string (e.g. "3.14", "0.025").
+	// Supports minimum/maximum constraints on the numeric value.
+	FieldType_FIELD_TYPE_NUMBER FieldType = 7
+	// Boolean value. Encoded as "true" or "false".
+	FieldType_FIELD_TYPE_BOOL FieldType = 8
 )
 
 // Enum value maps for FieldType.
@@ -58,6 +63,8 @@ var (
 		4: "FIELD_TYPE_DURATION",
 		5: "FIELD_TYPE_URL",
 		6: "FIELD_TYPE_JSON",
+		7: "FIELD_TYPE_NUMBER",
+		8: "FIELD_TYPE_BOOL",
 	}
 	FieldType_value = map[string]int32{
 		"FIELD_TYPE_UNSPECIFIED": 0,
@@ -67,6 +74,8 @@ var (
 		"FIELD_TYPE_DURATION":    4,
 		"FIELD_TYPE_URL":         5,
 		"FIELD_TYPE_JSON":        6,
+		"FIELD_TYPE_NUMBER":      7,
+		"FIELD_TYPE_BOOL":        8,
 	}
 )
 
@@ -101,12 +110,12 @@ func (FieldType) EnumDescriptor() ([]byte, []int) {
 // Which constraints apply depends on the field's type — see FieldType docs.
 type FieldConstraints struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// For int/duration: minimum allowed value.
+	// For integer/number/duration: minimum allowed value.
 	// For string: minimum allowed length.
-	Min *int64 `protobuf:"varint,1,opt,name=min,proto3,oneof" json:"min,omitempty"`
-	// For int/duration: maximum allowed value.
+	Min *float64 `protobuf:"fixed64,1,opt,name=min,proto3,oneof" json:"min,omitempty"`
+	// For integer/number/duration: maximum allowed value.
 	// For string: maximum allowed length.
-	Max *int64 `protobuf:"varint,2,opt,name=max,proto3,oneof" json:"max,omitempty"`
+	Max *float64 `protobuf:"fixed64,2,opt,name=max,proto3,oneof" json:"max,omitempty"`
 	// Regular expression pattern the value must match.
 	// Applies to string-typed fields. Uses RE2 syntax.
 	Regex *string `protobuf:"bytes,3,opt,name=regex,proto3,oneof" json:"regex,omitempty"`
@@ -150,14 +159,14 @@ func (*FieldConstraints) Descriptor() ([]byte, []int) {
 	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *FieldConstraints) GetMin() int64 {
+func (x *FieldConstraints) GetMin() float64 {
 	if x != nil && x.Min != nil {
 		return *x.Min
 	}
 	return 0
 }
 
-func (x *FieldConstraints) GetMax() int64 {
+func (x *FieldConstraints) GetMax() float64 {
 	if x != nil && x.Max != nil {
 		return *x.Max
 	}
@@ -1133,8 +1142,8 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\n" +
 	"\x1ccentralconfig/v1/types.proto\x12\x10centralconfig.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
 	"\x10FieldConstraints\x12\x15\n" +
-	"\x03min\x18\x01 \x01(\x03H\x00R\x03min\x88\x01\x01\x12\x15\n" +
-	"\x03max\x18\x02 \x01(\x03H\x01R\x03max\x88\x01\x01\x12\x19\n" +
+	"\x03min\x18\x01 \x01(\x01H\x00R\x03min\x88\x01\x01\x12\x15\n" +
+	"\x03max\x18\x02 \x01(\x01H\x01R\x03max\x88\x01\x01\x12\x19\n" +
 	"\x05regex\x18\x03 \x01(\tH\x02R\x05regex\x88\x01\x01\x12\x1f\n" +
 	"\venum_values\x18\x04 \x03(\tR\n" +
 	"enumValues\x12$\n" +
@@ -1249,7 +1258,7 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\flast_read_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
 	"lastReadAt\x88\x01\x01B\x0f\n" +
 	"\r_last_read_byB\x0f\n" +
-	"\r_last_read_at*\xa9\x01\n" +
+	"\r_last_read_at*\xd5\x01\n" +
 	"\tFieldType\x12\x1a\n" +
 	"\x16FIELD_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eFIELD_TYPE_INT\x10\x01\x12\x15\n" +
@@ -1257,7 +1266,9 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\x0fFIELD_TYPE_TIME\x10\x03\x12\x17\n" +
 	"\x13FIELD_TYPE_DURATION\x10\x04\x12\x12\n" +
 	"\x0eFIELD_TYPE_URL\x10\x05\x12\x13\n" +
-	"\x0fFIELD_TYPE_JSON\x10\x06B\xd2\x01\n" +
+	"\x0fFIELD_TYPE_JSON\x10\x06\x12\x15\n" +
+	"\x11FIELD_TYPE_NUMBER\x10\a\x12\x13\n" +
+	"\x0fFIELD_TYPE_BOOL\x10\bB\xd2\x01\n" +
 	"\x14com.centralconfig.v1B\n" +
 	"TypesProtoP\x01ZMgithub.com/zeevdr/central-config-service/api/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
 

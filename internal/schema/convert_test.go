@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
+	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
 )
 
 func TestParseUUID_Valid(t *testing.T) {
@@ -57,13 +58,15 @@ func TestComputeChecksum_OrderIndependent(t *testing.T) {
 }
 
 func TestFieldTypeToProto_RoundTrip(t *testing.T) {
-	types := map[string]pb.FieldType{
-		"int":      pb.FieldType_FIELD_TYPE_INT,
-		"string":   pb.FieldType_FIELD_TYPE_STRING,
-		"time":     pb.FieldType_FIELD_TYPE_TIME,
-		"duration": pb.FieldType_FIELD_TYPE_DURATION,
-		"url":      pb.FieldType_FIELD_TYPE_URL,
-		"json":     pb.FieldType_FIELD_TYPE_JSON,
+	types := map[dbstore.FieldType]pb.FieldType{
+		dbstore.FieldTypeInteger:  pb.FieldType_FIELD_TYPE_INT,
+		dbstore.FieldTypeNumber:   pb.FieldType_FIELD_TYPE_NUMBER,
+		dbstore.FieldTypeString:   pb.FieldType_FIELD_TYPE_STRING,
+		dbstore.FieldTypeBool:     pb.FieldType_FIELD_TYPE_BOOL,
+		dbstore.FieldTypeTime:     pb.FieldType_FIELD_TYPE_TIME,
+		dbstore.FieldTypeDuration: pb.FieldType_FIELD_TYPE_DURATION,
+		dbstore.FieldTypeUrl:      pb.FieldType_FIELD_TYPE_URL,
+		dbstore.FieldTypeJson:     pb.FieldType_FIELD_TYPE_JSON,
 	}
 	for dbType, protoType := range types {
 		assert.Equal(t, protoType, fieldTypeToProto(dbType), "dbType: %s", dbType)

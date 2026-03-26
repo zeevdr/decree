@@ -56,3 +56,27 @@ func ptrString(s string) *string {
 	}
 	return &s
 }
+
+// dbFieldTypeToProto converts a DB field type to proto enum.
+func dbFieldTypeToProto(t dbstore.FieldType) pb.FieldType {
+	switch t {
+	case dbstore.FieldTypeInteger:
+		return pb.FieldType_FIELD_TYPE_INT
+	case dbstore.FieldTypeNumber:
+		return pb.FieldType_FIELD_TYPE_NUMBER
+	case dbstore.FieldTypeString:
+		return pb.FieldType_FIELD_TYPE_STRING
+	case dbstore.FieldTypeBool:
+		return pb.FieldType_FIELD_TYPE_BOOL
+	case dbstore.FieldTypeTime:
+		return pb.FieldType_FIELD_TYPE_TIME
+	case dbstore.FieldTypeDuration:
+		return pb.FieldType_FIELD_TYPE_DURATION
+	case dbstore.FieldTypeUrl:
+		return pb.FieldType_FIELD_TYPE_URL
+	case dbstore.FieldTypeJson:
+		return pb.FieldType_FIELD_TYPE_JSON
+	default:
+		return pb.FieldType_FIELD_TYPE_UNSPECIFIED
+	}
+}

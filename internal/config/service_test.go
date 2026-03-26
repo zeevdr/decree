@@ -28,19 +28,19 @@ func testUUID(b byte) pgtype.UUID {
 	return id
 }
 
-func newTestService() (*Service, *mockStore, *mockCache, *mockPublisher, *mockSubscriber) {
+func newTestService() (*Service, *mockStore, *mockCache, *mockPublisher) {
 	store := &mockStore{}
 	cache := &mockCache{}
 	pub := &mockPublisher{}
 	sub := &mockSubscriber{}
 	svc := NewService(store, cache, pub, sub, testLogger)
-	return svc, store, cache, pub, sub
+	return svc, store, cache, pub
 }
 
 // --- GetConfig ---
 
 func TestGetConfig_CacheHit(t *testing.T) {
-	svc, store, cache, _, _ := newTestService()
+	svc, store, cache, _ := newTestService()
 	ctx := context.Background()
 
 	tenantID := testUUID(1)
@@ -63,7 +63,7 @@ func TestGetConfig_CacheHit(t *testing.T) {
 }
 
 func TestGetConfig_CacheMiss(t *testing.T) {
-	svc, store, cache, _, _ := newTestService()
+	svc, store, cache, _ := newTestService()
 	ctx := context.Background()
 
 	tenantID := testUUID(1)
@@ -88,7 +88,7 @@ func TestGetConfig_CacheMiss(t *testing.T) {
 }
 
 func TestGetConfig_IncludeDescriptions_BypassesCache(t *testing.T) {
-	svc, store, cache, _, _ := newTestService()
+	svc, store, cache, _ := newTestService()
 	ctx := context.Background()
 
 	tenantID := testUUID(1)
@@ -117,7 +117,7 @@ func TestGetConfig_IncludeDescriptions_BypassesCache(t *testing.T) {
 // --- SetField ---
 
 func TestSetField_Success(t *testing.T) {
-	svc, store, cache, pub, _ := newTestService()
+	svc, store, cache, pub := newTestService()
 	ctx := context.Background()
 
 	tenantID := testUUID(1)
@@ -149,7 +149,7 @@ func TestSetField_Success(t *testing.T) {
 }
 
 func TestSetField_ChecksumMismatch(t *testing.T) {
-	svc, store, _, _, _ := newTestService()
+	svc, store, _, _ := newTestService()
 	ctx := context.Background()
 
 	tenantID := testUUID(1)
@@ -173,7 +173,7 @@ func TestSetField_ChecksumMismatch(t *testing.T) {
 }
 
 func TestSetField_LockedField(t *testing.T) {
-	svc, store, _, _, _ := newTestService()
+	svc, store, _, _ := newTestService()
 	// Use admin context — lock checks only apply to non-superadmin.
 	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{
 		Role:     auth.RoleAdmin,
@@ -201,7 +201,7 @@ func TestSetField_LockedField(t *testing.T) {
 // --- GetField ---
 
 func TestGetField_NotFound(t *testing.T) {
-	svc, store, _, _, _ := newTestService()
+	svc, store, _, _ := newTestService()
 	ctx := context.Background()
 
 	tenantID := testUUID(1)
@@ -224,7 +224,7 @@ func TestGetField_NotFound(t *testing.T) {
 // --- RollbackToVersion ---
 
 func TestRollbackToVersion_Success(t *testing.T) {
-	svc, store, cache, _, _ := newTestService()
+	svc, store, cache, _ := newTestService()
 	ctx := context.Background()
 
 	tenantID := testUUID(1)
@@ -254,4 +254,107 @@ func TestRollbackToVersion_Success(t *testing.T) {
 	assert.Equal(t, int32(6), resp.ConfigVersion.Version)
 	// Should copy 2 values.
 	store.AssertNumberOfCalls(t, "SetConfigValue", 2)
+}
+
+// --- ExportConfig ---
+
+func TestExportConfig_Success(t *testing.T) {
+	svc, store, _, _ := newTestService()
+	ctx := context.Background()
+
+	tenantID := testUUID(1)
+	tenantIDStr := uuidToString(tenantID)
+	schemaID := testUUID(10)
+	schemaVersionID := testUUID(11)
+
+	store.On("GetLatestConfigVersion", ctx, tenantID).
+		Return(dbstore.ConfigVersion{Version: 3}, nil)
+	store.On("GetTenantByID", ctx, tenantID).
+		Return(dbstore.Tenant{SchemaID: schemaID, SchemaVersion: 1}, nil)
+	store.On("GetSchemaVersion", ctx, dbstore.GetSchemaVersionParams{SchemaID: schemaID, Version: 1}).
+		Return(dbstore.SchemaVersion{ID: schemaVersionID}, nil)
+	store.On("GetSchemaFields", ctx, schemaVersionID).
+		Return([]dbstore.SchemaField{
+			{Path: "payments.fee", FieldType: dbstore.FieldTypeNumber},
+			{Path: "payments.enabled", FieldType: dbstore.FieldTypeBool},
+		}, nil)
+	store.On("GetFullConfigAtVersion", ctx, dbstore.GetFullConfigAtVersionParams{TenantID: tenantID, Version: 3}).
+		Return([]dbstore.GetFullConfigAtVersionRow{
+			{FieldPath: "payments.fee", Value: "0.025"},
+			{FieldPath: "payments.enabled", Value: "true"},
+		}, nil)
+	desc := "version 3"
+	store.On("GetConfigVersion", ctx, dbstore.GetConfigVersionParams{TenantID: tenantID, Version: 3}).
+		Return(dbstore.ConfigVersion{Version: 3, Description: &desc}, nil)
+
+	resp, err := svc.ExportConfig(ctx, &pb.ExportConfigRequest{TenantId: tenantIDStr})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, resp.YamlContent)
+
+	// Parse and verify typed values
+	doc, err := unmarshalConfigYAML(resp.YamlContent)
+	require.NoError(t, err)
+	assert.Equal(t, int32(3), doc.Version)
+	assert.Equal(t, "version 3", doc.Description)
+	assert.Equal(t, 0.025, doc.Values["payments.fee"].Value)
+	assert.Equal(t, true, doc.Values["payments.enabled"].Value)
+}
+
+// --- ImportConfig ---
+
+func TestImportConfig_Success(t *testing.T) {
+	svc, store, cache, pub := newTestService()
+	ctx := context.Background()
+
+	tenantID := testUUID(1)
+	tenantIDStr := uuidToString(tenantID)
+	schemaID := testUUID(10)
+	schemaVersionID := testUUID(11)
+	newVersionID := testUUID(20)
+
+	yamlContent := []byte(`
+syntax: "v1"
+description: "imported config"
+values:
+  payments.fee:
+    value: 0.05
+  payments.enabled:
+    value: true
+`)
+
+	store.On("GetTenantByID", ctx, tenantID).
+		Return(dbstore.Tenant{SchemaID: schemaID, SchemaVersion: 1}, nil)
+	store.On("GetSchemaVersion", ctx, dbstore.GetSchemaVersionParams{SchemaID: schemaID, Version: 1}).
+		Return(dbstore.SchemaVersion{ID: schemaVersionID}, nil)
+	store.On("GetSchemaFields", ctx, schemaVersionID).
+		Return([]dbstore.SchemaField{
+			{Path: "payments.fee", FieldType: dbstore.FieldTypeNumber},
+			{Path: "payments.enabled", FieldType: dbstore.FieldTypeBool},
+		}, nil)
+	store.On("GetFieldLocks", ctx, tenantID).
+		Return([]dbstore.TenantFieldLock{}, nil)
+	store.On("GetLatestConfigVersion", ctx, tenantID).
+		Return(dbstore.ConfigVersion{Version: 2}, nil)
+	store.On("GetConfigValueAtVersion", ctx, mock.AnythingOfType("dbstore.GetConfigValueAtVersionParams")).
+		Return(dbstore.GetConfigValueAtVersionRow{Value: ""}, pgx.ErrNoRows)
+	store.On("CreateConfigVersion", ctx, mock.AnythingOfType("dbstore.CreateConfigVersionParams")).
+		Return(dbstore.ConfigVersion{ID: newVersionID, TenantID: tenantID, Version: 3, CreatedBy: "unknown"}, nil)
+	store.On("SetConfigValue", ctx, mock.AnythingOfType("dbstore.SetConfigValueParams")).
+		Return(nil)
+	store.On("InsertAuditWriteLog", ctx, mock.AnythingOfType("dbstore.InsertAuditWriteLogParams")).
+		Return(nil)
+	cache.On("Invalidate", ctx, tenantIDStr).Return(nil)
+	pub.On("Publish", ctx, mock.AnythingOfType("pubsub.ConfigChangeEvent")).Return(nil)
+
+	resp, err := svc.ImportConfig(ctx, &pb.ImportConfigRequest{
+		TenantId:    tenantIDStr,
+		YamlContent: yamlContent,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(3), resp.ConfigVersion.Version)
+	store.AssertNumberOfCalls(t, "SetConfigValue", 2)
+	store.AssertNumberOfCalls(t, "InsertAuditWriteLog", 2)
+	cache.AssertCalled(t, "Invalidate", ctx, tenantIDStr)
 }

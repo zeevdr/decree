@@ -40,8 +40,8 @@ func init() {
 
 // jwksJSON returns a JWKS JSON document for the test RSA public key.
 func jwksJSON() []byte {
-	n := testKey.PublicKey.N
-	e := big.NewInt(int64(testKey.PublicKey.E))
+	n := testKey.N
+	e := big.NewInt(int64(testKey.E))
 	jwks := map[string]any{
 		"keys": []map[string]any{
 			{
@@ -63,7 +63,7 @@ func newTestInterceptor(t *testing.T, issuer string) *Interceptor {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(jwksJSON())
+		_, _ = w.Write(jwksJSON())
 	}))
 	t.Cleanup(srv.Close)
 

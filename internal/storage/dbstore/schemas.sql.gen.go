@@ -44,7 +44,7 @@ RETURNING id, schema_version_id, path, field_type, constraints, nullable, deprec
 type CreateSchemaFieldParams struct {
 	SchemaVersionID pgtype.UUID `json:"schema_version_id"`
 	Path            string      `json:"path"`
-	FieldType       string      `json:"field_type"`
+	FieldType       FieldType   `json:"field_type"`
 	Constraints     []byte      `json:"constraints"`
 	Nullable        bool        `json:"nullable"`
 	Deprecated      bool        `json:"deprecated"`

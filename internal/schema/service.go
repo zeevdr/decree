@@ -118,10 +118,7 @@ func (s *Service) ListSchemas(ctx context.Context, req *pb.ListSchemasRequest) (
 	}
 
 	var offset int32
-	// Simple offset-based pagination for now — page_token is the offset as string.
-	if req.PageToken != "" {
-		// TODO: implement cursor-based pagination
-	}
+	// TODO: implement cursor-based pagination using req.PageToken.
 
 	schemas, err := s.store.ListSchemas(ctx, dbstore.ListSchemasParams{
 		Limit:  pageSize,
@@ -169,9 +166,7 @@ func (s *Service) UpdateSchema(ctx context.Context, req *pb.UpdateSchemaRequest)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get latest version")
 	}
-	if latestVersion.Published {
-		// Published versions are immutable — create a new version.
-	}
+	// Published versions are immutable — always create a new version regardless.
 
 	// Get existing fields.
 	existingFields, err := s.store.GetSchemaFields(ctx, latestVersion.ID)

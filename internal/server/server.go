@@ -16,9 +16,9 @@ import (
 
 // Config holds the server configuration.
 type Config struct {
-	GRPCPort       string
-	EnableServices []string
-	Logger         *slog.Logger
+	GRPCPort        string
+	EnableServices  []string
+	Logger          *slog.Logger
 	AuthInterceptor *auth.Interceptor
 }
 

@@ -33,8 +33,8 @@ func TestYAMLRoundtrip(t *testing.T) {
 				Type:     pb.FieldType_FIELD_TYPE_INT,
 				Nullable: true,
 				Constraints: &pb.FieldConstraints{
-					Min: ptr(int64(0)),
-					Max: ptr(int64(10)),
+					Min: ptr(float64(0)),
+					Max: ptr(float64(10)),
 				},
 			},
 			{
@@ -68,10 +68,10 @@ func TestYAMLRoundtrip(t *testing.T) {
 	assert.Equal(t, "0.5%", feeField.Default)
 
 	retriesField := doc.Fields["payments.max_retries"]
-	assert.Equal(t, "int", retriesField.Type)
+	assert.Equal(t, "integer", retriesField.Type)
 	assert.True(t, retriesField.Nullable)
-	assert.Equal(t, int64(0), *retriesField.Constraints.Minimum)
-	assert.Equal(t, int64(10), *retriesField.Constraints.Maximum)
+	assert.Equal(t, float64(0), *retriesField.Constraints.Minimum)
+	assert.Equal(t, float64(10), *retriesField.Constraints.Maximum)
 
 	currencyField := doc.Fields["payments.currency"]
 	assert.Equal(t, []string{"USD", "EUR", "GBP"}, currencyField.Constraints.Enum)
@@ -106,8 +106,8 @@ func TestYAMLRoundtrip(t *testing.T) {
 	require.NotNil(t, retries)
 	assert.Equal(t, pb.FieldType_FIELD_TYPE_INT, retries.Type)
 	assert.True(t, retries.Nullable)
-	assert.Equal(t, int64(0), *retries.Constraints.Min)
-	assert.Equal(t, int64(10), *retries.Constraints.Max)
+	assert.Equal(t, float64(0), *retries.Constraints.Min)
+	assert.Equal(t, float64(10), *retries.Constraints.Max)
 
 	currency := fieldMap["payments.currency"]
 	require.NotNil(t, currency)
@@ -124,8 +124,10 @@ func TestYAMLTypeMapping(t *testing.T) {
 		yaml  string
 		proto pb.FieldType
 	}{
-		{"int", pb.FieldType_FIELD_TYPE_INT},
+		{"integer", pb.FieldType_FIELD_TYPE_INT},
+		{"number", pb.FieldType_FIELD_TYPE_NUMBER},
 		{"string", pb.FieldType_FIELD_TYPE_STRING},
+		{"bool", pb.FieldType_FIELD_TYPE_BOOL},
 		{"time", pb.FieldType_FIELD_TYPE_TIME},
 		{"duration", pb.FieldType_FIELD_TYPE_DURATION},
 		{"url", pb.FieldType_FIELD_TYPE_URL},
@@ -193,7 +195,7 @@ syntax: "v1"
 name: test
 fields:
   x:
-    type: boolean
+    type: foobar
 `))
 		assert.ErrorContains(t, err, "unknown type")
 	})

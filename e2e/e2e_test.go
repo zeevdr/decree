@@ -485,7 +485,7 @@ func TestSchemaExportImport(t *testing.T) {
 	// 4. Modify YAML — add a field, re-import.
 	modified := bytes.Replace(yamlContent,
 		[]byte("    trade.timeout:"),
-		[]byte("    trade.max_retries:\n        type: int\n    trade.timeout:"),
+		[]byte("    trade.max_retries:\n        type: integer\n    trade.timeout:"),
 		1,
 	)
 	importResp, err := schemaSvc.ImportSchema(ctx, &pb.ImportSchemaRequest{YamlContent: modified})
@@ -516,4 +516,107 @@ fields:
 	// Cleanup.
 	_, _ = schemaSvc.DeleteSchema(ctx, &pb.DeleteSchemaRequest{Id: schemaID})
 	_, _ = schemaSvc.DeleteSchema(ctx, &pb.DeleteSchemaRequest{Id: newImportResp.Schema.Id})
+}
+
+// --- Config Export/Import ---
+
+func TestConfigExportImport(t *testing.T) {
+	conn := dial(t)
+	schemaSvc := pb.NewSchemaServiceClient(conn)
+	configSvc := pb.NewConfigServiceClient(conn)
+	ctx := context.Background()
+
+	// 1. Create and publish a schema with typed fields.
+	createResp, err := schemaSvc.CreateSchema(ctx, &pb.CreateSchemaRequest{
+		Name: "config-export-e2e",
+		Fields: []*pb.SchemaField{
+			{Path: "app.enabled", Type: pb.FieldType_FIELD_TYPE_BOOL},
+			{Path: "app.max_retries", Type: pb.FieldType_FIELD_TYPE_INT},
+			{Path: "app.fee_rate", Type: pb.FieldType_FIELD_TYPE_NUMBER},
+			{Path: "app.name", Type: pb.FieldType_FIELD_TYPE_STRING},
+			{Path: "app.timeout", Type: pb.FieldType_FIELD_TYPE_DURATION},
+		},
+	})
+	require.NoError(t, err)
+	schemaID := createResp.Schema.Id
+
+	_, err = schemaSvc.PublishSchema(ctx, &pb.PublishSchemaRequest{Id: schemaID, Version: 1})
+	require.NoError(t, err)
+
+	// 2. Create a tenant.
+	tenantResp, err := schemaSvc.CreateTenant(ctx, &pb.CreateTenantRequest{
+		Name:          "config-export-tenant-e2e",
+		SchemaId:      schemaID,
+		SchemaVersion: 1,
+	})
+	require.NoError(t, err)
+	tenantID := tenantResp.Tenant.Id
+
+	// 3. Set config values.
+	_, err = configSvc.SetFields(ctx, &pb.SetFieldsRequest{
+		TenantId:    tenantID,
+		Description: ptr("Initial config"),
+		Updates: []*pb.FieldUpdate{
+			{FieldPath: "app.enabled", Value: "true"},
+			{FieldPath: "app.max_retries", Value: "3"},
+			{FieldPath: "app.fee_rate", Value: "0.025"},
+			{FieldPath: "app.name", Value: "MyApp"},
+			{FieldPath: "app.timeout", Value: "30s"},
+		},
+	})
+	require.NoError(t, err)
+
+	// 4. Export config.
+	exportResp, err := configSvc.ExportConfig(ctx, &pb.ExportConfigRequest{TenantId: tenantID})
+	require.NoError(t, err)
+	require.NotEmpty(t, exportResp.YamlContent)
+
+	yamlStr := string(exportResp.YamlContent)
+	t.Logf("Exported config YAML:\n%s", yamlStr)
+
+	// Verify typed values in YAML.
+	assert.Contains(t, yamlStr, "syntax:")
+	assert.Contains(t, yamlStr, "app.enabled")
+	assert.Contains(t, yamlStr, "app.max_retries")
+	assert.Contains(t, yamlStr, "value: true")  // bool, not "true"
+	assert.Contains(t, yamlStr, "value: 3")     // int, not "3"
+	assert.Contains(t, yamlStr, "value: 0.025") // number, not "0.025"
+
+	// 5. Modify YAML and import — change some values.
+	modified := bytes.Replace(exportResp.YamlContent,
+		[]byte("value: 3"),
+		[]byte("value: 5"),
+		1,
+	)
+	modified = bytes.Replace(modified,
+		[]byte("value: true"),
+		[]byte("value: false"),
+		1,
+	)
+
+	importResp, err := configSvc.ImportConfig(ctx, &pb.ImportConfigRequest{
+		TenantId:    tenantID,
+		YamlContent: modified,
+		Description: ptr("Updated via import"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), importResp.ConfigVersion.Version)
+
+	// 6. Verify the imported values.
+	getResp, err := configSvc.GetConfig(ctx, &pb.GetConfigRequest{TenantId: tenantID})
+	require.NoError(t, err)
+
+	valueMap := make(map[string]string)
+	for _, v := range getResp.Config.Values {
+		valueMap[v.FieldPath] = v.Value
+	}
+	assert.Equal(t, "false", valueMap["app.enabled"])
+	assert.Equal(t, "5", valueMap["app.max_retries"])
+	assert.Equal(t, "0.025", valueMap["app.fee_rate"])
+	assert.Equal(t, "MyApp", valueMap["app.name"])
+	assert.Equal(t, "30s", valueMap["app.timeout"])
+
+	// Cleanup.
+	_, _ = schemaSvc.DeleteTenant(ctx, &pb.DeleteTenantRequest{Id: tenantID})
+	_, _ = schemaSvc.DeleteSchema(ctx, &pb.DeleteSchemaRequest{Id: schemaID})
 }
