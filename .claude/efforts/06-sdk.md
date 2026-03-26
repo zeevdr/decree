@@ -1,6 +1,6 @@
 # SDK
 
-**Status:** Planning
+**Status:** Complete
 **Started:** 2026-03-26
 
 ---
@@ -70,3 +70,16 @@ adminclient → api (generated proto)
 ```
 
 The watcher uses configclient for initial config load and writes. It manages its own subscription stream directly via the generated proto client.
+
+## Contrib Integrations
+
+Third-party ecosystem integrations live under `contrib/`, each as its own Go module:
+
+```
+contrib/
+├── viper/        # viper remote provider (future)
+├── koanf/        # koanf provider (future)
+└── ...
+```
+
+Dependency direction: `contrib/* → sdk/configclient or sdk/configwatcher → api`
