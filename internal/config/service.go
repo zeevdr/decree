@@ -19,6 +19,7 @@ import (
 	"github.com/zeevdr/central-config-service/internal/cache"
 	"github.com/zeevdr/central-config-service/internal/pubsub"
 	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
+	"github.com/zeevdr/central-config-service/internal/telemetry"
 )
 
 const defaultCacheTTL = 5 * time.Minute
@@ -26,21 +27,25 @@ const defaultCacheTTL = 5 * time.Minute
 // Service implements the ConfigService gRPC server.
 type Service struct {
 	pb.UnimplementedConfigServiceServer
-	store      Store
-	cache      cache.ConfigCache
-	publisher  pubsub.Publisher
-	subscriber pubsub.Subscriber
-	logger     *slog.Logger
+	store        Store
+	cache        cache.ConfigCache
+	publisher    pubsub.Publisher
+	subscriber   pubsub.Subscriber
+	logger       *slog.Logger
+	cacheMetrics *telemetry.CacheMetrics
+	metrics      *telemetry.ConfigMetrics
 }
 
 // NewService creates a new ConfigService.
-func NewService(store Store, cache cache.ConfigCache, pub pubsub.Publisher, sub pubsub.Subscriber, logger *slog.Logger) *Service {
+func NewService(store Store, cache cache.ConfigCache, pub pubsub.Publisher, sub pubsub.Subscriber, logger *slog.Logger, cacheMetrics *telemetry.CacheMetrics, configMetrics *telemetry.ConfigMetrics) *Service {
 	return &Service{
-		store:      store,
-		cache:      cache,
-		publisher:  pub,
-		subscriber: sub,
-		logger:     logger,
+		store:        store,
+		cache:        cache,
+		publisher:    pub,
+		subscriber:   sub,
+		logger:       logger,
+		cacheMetrics: cacheMetrics,
+		metrics:      configMetrics,
 	}
 }
 
@@ -61,6 +66,7 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 	// If descriptions not requested, try cache.
 	if !req.IncludeDescriptions {
 		if cached, err := s.cache.Get(ctx, req.TenantId, version); err == nil && cached != nil {
+			s.cacheMetrics.Hit(ctx)
 			values := make([]*pb.ConfigValue, 0, len(cached))
 			for path, val := range cached {
 				values = append(values, &pb.ConfigValue{
@@ -73,6 +79,7 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 				Config: &pb.Config{TenantId: req.TenantId, Version: version, Values: values},
 			}, nil
 		}
+		s.cacheMetrics.Miss(ctx)
 	}
 
 	// Fetch from DB.
@@ -253,6 +260,9 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 	}
 	s.publishChange(ctx, req.TenantId, newVersion.Version, req.FieldPath, oldValue, req.Value, actor)
 
+	s.metrics.RecordWrite(ctx, req.TenantId, "set_field")
+	s.metrics.RecordVersion(ctx, req.TenantId, int64(newVersion.Version))
+
 	return &pb.SetFieldResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
 }
 
@@ -346,6 +356,9 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 	for _, ch := range changes {
 		s.publishChange(ctx, req.TenantId, newVersion.Version, ch.fieldPath, ch.oldValue, ch.newValue, actor)
 	}
+
+	s.metrics.RecordWrite(ctx, req.TenantId, "set_fields")
+	s.metrics.RecordVersion(ctx, req.TenantId, int64(newVersion.Version))
 
 	return &pb.SetFieldsResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
 }
@@ -474,6 +487,9 @@ func (s *Service) RollbackToVersion(ctx context.Context, req *pb.RollbackToVersi
 	if err := s.cache.Invalidate(ctx, req.TenantId); err != nil {
 		s.logger.WarnContext(ctx, "failed to invalidate cache", "error", err)
 	}
+
+	s.metrics.RecordWrite(ctx, req.TenantId, "rollback")
+	s.metrics.RecordVersion(ctx, req.TenantId, int64(newVersion.Version))
 
 	return &pb.RollbackToVersionResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
 }
@@ -700,6 +716,9 @@ func (s *Service) ImportConfig(ctx context.Context, req *pb.ImportConfigRequest)
 	for _, ch := range changes {
 		s.publishChange(ctx, req.TenantId, newVersion.Version, ch.fieldPath, ch.oldValue, ch.newValue, actor)
 	}
+
+	s.metrics.RecordWrite(ctx, req.TenantId, "import")
+	s.metrics.RecordVersion(ctx, req.TenantId, int64(newVersion.Version))
 
 	return &pb.ImportConfigResponse{ConfigVersion: configVersionToProto(newVersion)}, nil
 }

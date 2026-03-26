@@ -65,7 +65,7 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] E2E tests — docker-compose stack (PG + Redis + migrate + service), 6 test suites: schema lifecycle, full flow (schema→tenant→config→lock→audit), streaming subscription, error cases, schema export/import, config export/import
 - [x] Lint cleanup — all golangci-lint issues fixed (errcheck, gofumpt, staticcheck, gocritic, unparam)
 - [x] Proto documentation — comprehensive field-level comments across all 4 proto files (slug formats, value encoding, import semantics, concurrency, caching, versioning, locks, pagination, cascades)
-- [ ] OpenTelemetry integration (tracing + custom metrics)
+- [x] OpenTelemetry integration — feature-flagged traces (gRPC/DB/Redis) + metrics (gRPC/DB pool/cache/config/schema), slog trace correlation, OTel Collector + Jaeger in docker-compose
 - [ ] CI (GitHub Actions)
 
 ---

@@ -12,20 +12,23 @@ import (
 
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
 	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
+	"github.com/zeevdr/central-config-service/internal/telemetry"
 )
 
 // Service implements the SchemaService gRPC server.
 type Service struct {
 	pb.UnimplementedSchemaServiceServer
-	store  Store
-	logger *slog.Logger
+	store   Store
+	logger  *slog.Logger
+	metrics *telemetry.SchemaMetrics
 }
 
 // NewService creates a new SchemaService.
-func NewService(store Store, logger *slog.Logger) *Service {
+func NewService(store Store, logger *slog.Logger, metrics *telemetry.SchemaMetrics) *Service {
 	return &Service{
-		store:  store,
-		logger: logger,
+		store:   store,
+		logger:  logger,
+		metrics: metrics,
 	}
 }
 
@@ -258,6 +261,8 @@ func (s *Service) PublishSchema(ctx context.Context, req *pb.PublishSchemaReques
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get fields")
 	}
+
+	s.metrics.RecordPublish(ctx)
 
 	return &pb.PublishSchemaResponse{
 		Schema: schemaToProto(schema, version, fields),

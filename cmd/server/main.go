@@ -8,7 +8,12 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/exaring/otelpgx"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
 	"github.com/zeevdr/central-config-service/internal/audit"
@@ -19,6 +24,7 @@ import (
 	"github.com/zeevdr/central-config-service/internal/schema"
 	"github.com/zeevdr/central-config-service/internal/server"
 	"github.com/zeevdr/central-config-service/internal/storage"
+	"github.com/zeevdr/central-config-service/internal/telemetry"
 )
 
 func main() {
@@ -27,13 +33,40 @@ func main() {
 
 func run() int {
 	cfg := loadConfig()
-	logger := newLogger(cfg.LogLevel)
+	otelCfg := telemetry.ConfigFromEnv()
+
+	// Logger — wrap with trace correlation if OTel is enabled.
+	logger := newLogger(cfg.LogLevel, otelCfg.Enabled)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Telemetry.
+	otelShutdown, err := telemetry.Init(ctx, otelCfg)
+	if err != nil {
+		logger.ErrorContext(ctx, "failed to initialize telemetry", "error", err)
+		return 1
+	}
+	defer func() { _ = otelShutdown(ctx) }()
+	if otelCfg.Enabled {
+		logger.InfoContext(ctx, "telemetry enabled",
+			"traces_grpc", otelCfg.TracesGRPC,
+			"traces_db", otelCfg.TracesDB,
+			"traces_redis", otelCfg.TracesRedis,
+			"metrics_grpc", otelCfg.MetricsGRPC,
+			"metrics_db_pool", otelCfg.MetricsDBPool,
+			"metrics_cache", otelCfg.MetricsCache,
+			"metrics_config", otelCfg.MetricsConfig,
+			"metrics_schema", otelCfg.MetricsSchema,
+		)
+	}
+
 	// Database.
-	db, err := storage.NewDB(ctx, cfg.DBWriteURL, cfg.DBReadURL)
+	var dbOpts []storage.Option
+	if otelCfg.TracesDB {
+		dbOpts = append(dbOpts, storage.WithTracer(otelpgx.NewTracer()))
+	}
+	db, err := storage.NewDB(ctx, cfg.DBWriteURL, cfg.DBReadURL, dbOpts...)
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to connect to database", "error", err)
 		return 1
@@ -52,6 +85,12 @@ func run() int {
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		logger.ErrorContext(ctx, "failed to connect to redis", "error", err)
 		return 1
+	}
+	if otelCfg.TracesRedis {
+		if err := redisotel.InstrumentTracing(redisClient); err != nil {
+			logger.ErrorContext(ctx, "failed to instrument redis tracing", "error", err)
+			return 1
+		}
 	}
 	logger.InfoContext(ctx, "connected to redis")
 
@@ -78,29 +117,41 @@ func run() int {
 		logger.InfoContext(ctx, "metadata auth enabled — pass x-subject, x-role, x-tenant-id headers")
 	}
 
-	// gRPC server.
+	// gRPC server with optional OTel stats handler.
+	var extraOpts []grpc.ServerOption
+	if otelCfg.TracesGRPC {
+		extraOpts = append(extraOpts, grpc.StatsHandler(otelgrpc.NewServerHandler()))
+	}
+
 	srv, err := server.New(server.Config{
 		GRPCPort:        cfg.GRPCPort,
 		EnableServices:  cfg.EnableServices,
 		Logger:          logger,
 		AuthInterceptor: authInterceptor,
+		ExtraOptions:    extraOpts,
 	})
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to create server", "error", err)
 		return 1
 	}
 
+	// Metrics (nil when disabled — all metric types handle nil receiver).
+	cacheMetrics := telemetry.NewCacheMetrics(otelCfg)
+	configMetrics := telemetry.NewConfigMetrics(otelCfg)
+	schemaMetrics := telemetry.NewSchemaMetrics(otelCfg)
+	telemetry.StartDBPoolMetrics(ctx, otelCfg, db.WritePool, db.ReadPool)
+
 	// Register services.
 	if srv.IsServiceEnabled("schema") {
 		schemaStore := schema.NewPGStore(db.WritePool, db.ReadPool)
-		schemaSvc := schema.NewService(schemaStore, logger)
+		schemaSvc := schema.NewService(schemaStore, logger, schemaMetrics)
 		pb.RegisterSchemaServiceServer(srv.GRPCServer(), schemaSvc)
 		srv.SetServiceHealthy("centralconfig.v1.SchemaService")
 		logger.InfoContext(ctx, "schema service enabled")
 	}
 	if srv.IsServiceEnabled("config") {
 		configStore := config.NewPGStore(db.WritePool, db.ReadPool)
-		configSvc := config.NewService(configStore, configCache, publisher, subscriber, logger)
+		configSvc := config.NewService(configStore, configCache, publisher, subscriber, logger, cacheMetrics, configMetrics)
 		pb.RegisterConfigServiceServer(srv.GRPCServer(), configSvc)
 		srv.SetServiceHealthy("centralconfig.v1.ConfigService")
 		logger.InfoContext(ctx, "config service enabled")
@@ -192,7 +243,7 @@ func parseServices(s string) []string {
 	return services
 }
 
-func newLogger(level string) *slog.Logger {
+func newLogger(level string, traceCorrelation bool) *slog.Logger {
 	var logLevel slog.Level
 	switch strings.ToLower(level) {
 	case "debug":
@@ -204,5 +255,9 @@ func newLogger(level string) *slog.Logger {
 	default:
 		logLevel = slog.LevelInfo
 	}
-	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+	var handler slog.Handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
+	if traceCorrelation {
+		handler = telemetry.NewLogHandler(handler)
+	}
+	return slog.New(handler)
 }

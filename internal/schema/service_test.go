@@ -31,7 +31,7 @@ func testUUID(b byte) pgtype.UUID {
 
 func TestCreateSchema_Success(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)
@@ -60,7 +60,7 @@ func TestCreateSchema_Success(t *testing.T) {
 
 func TestCreateSchema_EmptyName(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 
 	_, err := svc.CreateSchema(context.Background(), &pb.CreateSchemaRequest{Name: ""})
 
@@ -72,7 +72,7 @@ func TestCreateSchema_EmptyName(t *testing.T) {
 
 func TestGetSchema_LatestVersion(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)
@@ -94,7 +94,7 @@ func TestGetSchema_LatestVersion(t *testing.T) {
 
 func TestGetSchema_SpecificVersion(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)
@@ -117,7 +117,7 @@ func TestGetSchema_SpecificVersion(t *testing.T) {
 
 func TestGetSchema_NotFound(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)
@@ -134,7 +134,7 @@ func TestGetSchema_NotFound(t *testing.T) {
 
 func TestUpdateSchema_CreatesNewVersion(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)
@@ -172,7 +172,7 @@ func TestUpdateSchema_CreatesNewVersion(t *testing.T) {
 
 func TestPublishSchema_Success(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)
@@ -196,7 +196,7 @@ func TestPublishSchema_Success(t *testing.T) {
 
 func TestCreateTenant_RequiresPublishedSchema(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)
@@ -216,7 +216,7 @@ func TestCreateTenant_RequiresPublishedSchema(t *testing.T) {
 
 func TestCreateTenant_Success(t *testing.T) {
 	store := &mockStore{}
-	svc := NewService(store, testLogger)
+	svc := NewService(store, testLogger, nil)
 	ctx := context.Background()
 
 	schemaID := testUUID(1)

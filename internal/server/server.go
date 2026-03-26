@@ -24,6 +24,7 @@ type Config struct {
 	EnableServices  []string
 	Logger          *slog.Logger
 	AuthInterceptor GRPCInterceptor
+	ExtraOptions    []grpc.ServerOption
 }
 
 // Server wraps the gRPC server and health service.
@@ -41,10 +42,12 @@ func New(cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("listen on port %s: %w", cfg.GRPCPort, err)
 	}
 
-	opts := []grpc.ServerOption{
+	opts := make([]grpc.ServerOption, 0, len(cfg.ExtraOptions)+2)
+	opts = append(opts, cfg.ExtraOptions...)
+	opts = append(opts,
 		grpc.ChainUnaryInterceptor(cfg.AuthInterceptor.UnaryInterceptor()),
 		grpc.ChainStreamInterceptor(cfg.AuthInterceptor.StreamInterceptor()),
-	}
+	)
 
 	grpcServer := grpc.NewServer(opts...)
 	healthServer := health.NewServer()
