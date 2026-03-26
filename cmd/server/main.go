@@ -25,6 +25,7 @@ import (
 	"github.com/zeevdr/central-config-service/internal/server"
 	"github.com/zeevdr/central-config-service/internal/storage"
 	"github.com/zeevdr/central-config-service/internal/telemetry"
+	"github.com/zeevdr/central-config-service/internal/validation"
 )
 
 func main() {
@@ -151,7 +152,8 @@ func run() int {
 	}
 	if srv.IsServiceEnabled("config") {
 		configStore := config.NewPGStore(db.WritePool, db.ReadPool)
-		configSvc := config.NewService(configStore, configCache, publisher, subscriber, logger, cacheMetrics, configMetrics)
+		validatorFactory := validation.NewValidatorFactory(configStore)
+		configSvc := config.NewService(configStore, configCache, publisher, subscriber, logger, cacheMetrics, configMetrics, validatorFactory)
 		pb.RegisterConfigServiceServer(srv.GRPCServer(), configSvc)
 		srv.SetServiceHealthy("centralconfig.v1.ConfigService")
 		logger.InfoContext(ctx, "config service enabled")

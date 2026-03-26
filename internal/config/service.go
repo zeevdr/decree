@@ -20,6 +20,7 @@ import (
 	"github.com/zeevdr/central-config-service/internal/pubsub"
 	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
 	"github.com/zeevdr/central-config-service/internal/telemetry"
+	"github.com/zeevdr/central-config-service/internal/validation"
 )
 
 const defaultCacheTTL = 5 * time.Minute
@@ -34,10 +35,11 @@ type Service struct {
 	logger       *slog.Logger
 	cacheMetrics *telemetry.CacheMetrics
 	metrics      *telemetry.ConfigMetrics
+	validators   *validation.ValidatorFactory
 }
 
 // NewService creates a new ConfigService.
-func NewService(store Store, cache cache.ConfigCache, pub pubsub.Publisher, sub pubsub.Subscriber, logger *slog.Logger, cacheMetrics *telemetry.CacheMetrics, configMetrics *telemetry.ConfigMetrics) *Service {
+func NewService(store Store, cache cache.ConfigCache, pub pubsub.Publisher, sub pubsub.Subscriber, logger *slog.Logger, cacheMetrics *telemetry.CacheMetrics, configMetrics *telemetry.ConfigMetrics, validators *validation.ValidatorFactory) *Service {
 	return &Service{
 		store:        store,
 		cache:        cache,
@@ -46,6 +48,7 @@ func NewService(store Store, cache cache.ConfigCache, pub pubsub.Publisher, sub 
 		logger:       logger,
 		cacheMetrics: cacheMetrics,
 		metrics:      configMetrics,
+		validators:   validators,
 	}
 }
 
@@ -211,6 +214,9 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 	if err := s.checkFieldLock(ctx, tenantID, req.FieldPath); err != nil {
 		return nil, err
 	}
+	if err := s.validateField(ctx, tenantID, req.TenantId, req.FieldPath, req.Value); err != nil {
+		return nil, err
+	}
 
 	latestVersion, err := s.getOrCreateVersion(ctx, tenantID)
 	if err != nil {
@@ -284,6 +290,9 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 			}
 		}
 		if err := s.checkFieldLock(ctx, tenantID, update.FieldPath); err != nil {
+			return nil, err
+		}
+		if err := s.validateField(ctx, tenantID, req.TenantId, update.FieldPath, update.Value); err != nil {
 			return nil, err
 		}
 	}
@@ -843,6 +852,27 @@ func (s *Service) checkFieldLock(ctx context.Context, tenantID pgtype.UUID, fiel
 		if lock.FieldPath == fieldPath {
 			return status.Errorf(codes.PermissionDenied, "field %s is locked", fieldPath)
 		}
+	}
+	return nil
+}
+
+// validateField validates a typed value against the schema constraints.
+// In strict mode, rejects fields not defined in the schema.
+func (s *Service) validateField(ctx context.Context, tenantID pgtype.UUID, tenantIDStr, fieldPath string, value *pb.TypedValue) error {
+	if s.validators == nil {
+		return nil
+	}
+	validators, err := s.validators.GetValidators(ctx, tenantID, tenantIDStr)
+	if err != nil {
+		s.logger.WarnContext(ctx, "failed to get validators", "error", err)
+		return nil // don't block writes on validator lookup failure
+	}
+	v, ok := validators[fieldPath]
+	if !ok {
+		return status.Errorf(codes.InvalidArgument, "field %s is not defined in the schema", fieldPath)
+	}
+	if err := v.Validate(value); err != nil {
+		return status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	return nil
 }

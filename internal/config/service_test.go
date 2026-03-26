@@ -33,7 +33,7 @@ func newTestService() (*Service, *mockStore, *mockCache, *mockPublisher) {
 	cache := &mockCache{}
 	pub := &mockPublisher{}
 	sub := &mockSubscriber{}
-	svc := NewService(store, cache, pub, sub, testLogger, nil, nil)
+	svc := NewService(store, cache, pub, sub, testLogger, nil, nil, nil)
 	return svc, store, cache, pub
 }
 
