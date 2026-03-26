@@ -2,6 +2,18 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Field type enum
+CREATE TYPE field_type AS ENUM (
+    'integer',
+    'number',
+    'string',
+    'bool',
+    'time',
+    'duration',
+    'url',
+    'json'
+);
+
 -- Schema definitions
 CREATE TABLE schemas (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -27,7 +39,7 @@ CREATE TABLE schema_fields (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     schema_version_id UUID NOT NULL REFERENCES schema_versions(id) ON DELETE CASCADE,
     path              TEXT NOT NULL,
-    field_type        TEXT NOT NULL,
+    field_type        field_type NOT NULL,
     constraints       JSONB,
     nullable          BOOLEAN NOT NULL DEFAULT false,
     deprecated        BOOLEAN NOT NULL DEFAULT false,
@@ -113,3 +125,4 @@ DROP TABLE IF EXISTS tenants;
 DROP TABLE IF EXISTS schema_fields;
 DROP TABLE IF EXISTS schema_versions;
 DROP TABLE IF EXISTS schemas;
+DROP TYPE IF EXISTS field_type;
