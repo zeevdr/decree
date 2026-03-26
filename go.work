@@ -5,4 +5,5 @@ use (
 	./api
 	./sdk/configclient
 	./sdk/adminclient
+	./sdk/configwatcher
 )

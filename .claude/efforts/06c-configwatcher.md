@@ -1,6 +1,6 @@
 # SDK: configwatcher
 
-**Status:** Not Started
+**Status:** Complete
 **Parent:** 06-sdk
 
 ---
