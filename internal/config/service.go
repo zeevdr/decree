@@ -72,7 +72,7 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 				v := val
 				values = append(values, &pb.ConfigValue{
 					FieldPath: path,
-					Value:     &v,
+					Value:     stringToTypedValue(&v, pb.FieldType_FIELD_TYPE_STRING),
 					Checksum:  computeChecksum(val),
 				})
 			}
@@ -97,7 +97,7 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 	for _, row := range rows {
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
-			Value:     row.Value,
+			Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
 			Checksum:  computeChecksum(derefString(row.Value)),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
@@ -144,7 +144,7 @@ func (s *Service) GetField(ctx context.Context, req *pb.GetFieldRequest) (*pb.Ge
 
 	cv := &pb.ConfigValue{
 		FieldPath: row.FieldPath,
-		Value:     row.Value,
+		Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
 		Checksum:  computeChecksum(derefString(row.Value)),
 	}
 	if req.IncludeDescription && row.Description != nil {
@@ -180,7 +180,7 @@ func (s *Service) GetFields(ctx context.Context, req *pb.GetFieldsRequest) (*pb.
 		}
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
-			Value:     row.Value,
+			Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
 			Checksum:  computeChecksum(derefString(row.Value)),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
@@ -235,19 +235,20 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 		if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
 			ConfigVersionID: newVersion.ID,
 			FieldPath:       req.FieldPath,
-			Value:           req.Value,
+			Value:           typedValueToString(req.Value),
 			Description:     ptrString(req.GetValueDescription()),
 		}); txErr != nil {
 			return fmt.Errorf("set config value: %w", txErr)
 		}
 
+		newValueStr := typedValueToString(req.Value)
 		return tx.InsertAuditWriteLog(ctx, dbstore.InsertAuditWriteLogParams{
 			TenantID:      tenantID,
 			Actor:         actor,
 			Action:        "set_field",
 			FieldPath:     ptrString(req.FieldPath),
 			OldValue:      ptrString(oldValue),
-			NewValue:      req.Value,
+			NewValue:      newValueStr,
 			ConfigVersion: &newVersion.Version,
 		})
 	}); err != nil {
@@ -259,7 +260,7 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 	if err := s.cache.Invalidate(ctx, req.TenantId); err != nil {
 		s.logger.WarnContext(ctx, "failed to invalidate cache", "error", err)
 	}
-	s.publishChange(ctx, req.TenantId, newVersion.Version, req.FieldPath, oldValue, derefString(req.Value), actor)
+	s.publishChange(ctx, req.TenantId, newVersion.Version, req.FieldPath, oldValue, typedValueToDisplayString(req.Value), actor)
 
 	s.metrics.RecordWrite(ctx, req.TenantId, "set_field")
 	s.metrics.RecordVersion(ctx, req.TenantId, int64(newVersion.Version))
@@ -303,7 +304,7 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 		changes = append(changes, changeRecord{
 			fieldPath: update.FieldPath,
 			oldValue:  s.getCurrentValue(ctx, tenantID, update.FieldPath, latestVersion),
-			newValue:  derefString(update.Value),
+			newValue:  typedValueToDisplayString(update.Value),
 		})
 	}
 
@@ -325,19 +326,20 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 			if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
 				ConfigVersionID: newVersion.ID,
 				FieldPath:       update.FieldPath,
-				Value:           update.Value,
+				Value:           typedValueToString(update.Value),
 				Description:     ptrString(update.GetValueDescription()),
 			}); txErr != nil {
 				return fmt.Errorf("set config value %s: %w", update.FieldPath, txErr)
 			}
 
+			newValueStr := typedValueToString(update.Value)
 			if txErr = tx.InsertAuditWriteLog(ctx, dbstore.InsertAuditWriteLogParams{
 				TenantID:      tenantID,
 				Actor:         actor,
 				Action:        "set_field",
 				FieldPath:     ptrString(update.FieldPath),
 				OldValue:      ptrString(changes[i].oldValue),
-				NewValue:      update.Value,
+				NewValue:      newValueStr,
 				ConfigVersion: &newVersion.Version,
 			}); txErr != nil {
 				return fmt.Errorf("insert audit log for %s: %w", update.FieldPath, txErr)
@@ -532,8 +534,8 @@ func (s *Service) Subscribe(req *pb.SubscribeRequest, stream grpc.ServerStreamin
 					TenantId:  event.TenantID,
 					Version:   event.Version,
 					FieldPath: event.FieldPath,
-					OldValue:  ptrString(event.OldValue),
-					NewValue:  strPtr(event.NewValue),
+					OldValue:  stringToTypedValue(ptrString(event.OldValue), pb.FieldType_FIELD_TYPE_STRING),
+					NewValue:  stringToTypedValue(strPtr(event.NewValue), pb.FieldType_FIELD_TYPE_STRING),
 					ChangedBy: event.ChangedBy,
 					ChangedAt: timestamppb.New(event.ChangedAt),
 				},

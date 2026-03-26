@@ -128,9 +128,8 @@ message SetFieldRequest {
   // Dot-separated field path (e.g. "payments.fee").
   string field_path = 2;
 
-  // The new value, encoded as a string. See FieldType for encoding conventions.
-  // Omit (nil) to set the field to null. Empty string is a valid value.
-  optional string value = 3;
+  // The typed value. Omit to set the field to null.
+  TypedValue value = 3;
 
   // Optimistic concurrency control: the checksum from a previous GetField/GetConfig
   // response. If provided and the field's current checksum doesn't match, the
@@ -174,9 +173,8 @@ message FieldUpdate {
   // Dot-separated field path.
   string field_path = 1;
 
-  // The new value, encoded as a string.
-  // Omit (nil) to set the field to null. Empty string is a valid value.
-  optional string value = 2;
+  // The typed value. Omit to set the field to null.
+  TypedValue value = 2;
 
   // Optimistic concurrency control checksum for this specific field.
   // See SetFieldRequest.expected_checksum for details.

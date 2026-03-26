@@ -9,6 +9,7 @@ package centralconfigv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -23,8 +24,7 @@ const (
 )
 
 // FieldType enumerates the supported configuration value types.
-// All values are stored as strings; the type controls validation and
-// constraint interpretation.
+// Each type maps to a specific field in the TypedValue oneof.
 type FieldType int32
 
 const (
@@ -598,15 +598,201 @@ func (x *FieldLock) GetLockedValues() []string {
 	return nil
 }
 
+// TypedValue holds a configuration value with its native type.
+// An unset oneof (no field present) represents a null value.
+type TypedValue struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Kind:
+	//
+	//	*TypedValue_IntegerValue
+	//	*TypedValue_NumberValue
+	//	*TypedValue_StringValue
+	//	*TypedValue_BoolValue
+	//	*TypedValue_TimeValue
+	//	*TypedValue_DurationValue
+	//	*TypedValue_UrlValue
+	//	*TypedValue_JsonValue
+	Kind          isTypedValue_Kind `protobuf_oneof:"kind"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TypedValue) Reset() {
+	*x = TypedValue{}
+	mi := &file_centralconfig_v1_types_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TypedValue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TypedValue) ProtoMessage() {}
+
+func (x *TypedValue) ProtoReflect() protoreflect.Message {
+	mi := &file_centralconfig_v1_types_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TypedValue.ProtoReflect.Descriptor instead.
+func (*TypedValue) Descriptor() ([]byte, []int) {
+	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *TypedValue) GetKind() isTypedValue_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return nil
+}
+
+func (x *TypedValue) GetIntegerValue() int64 {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_IntegerValue); ok {
+			return x.IntegerValue
+		}
+	}
+	return 0
+}
+
+func (x *TypedValue) GetNumberValue() float64 {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_NumberValue); ok {
+			return x.NumberValue
+		}
+	}
+	return 0
+}
+
+func (x *TypedValue) GetStringValue() string {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_StringValue); ok {
+			return x.StringValue
+		}
+	}
+	return ""
+}
+
+func (x *TypedValue) GetBoolValue() bool {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_BoolValue); ok {
+			return x.BoolValue
+		}
+	}
+	return false
+}
+
+func (x *TypedValue) GetTimeValue() *timestamppb.Timestamp {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_TimeValue); ok {
+			return x.TimeValue
+		}
+	}
+	return nil
+}
+
+func (x *TypedValue) GetDurationValue() *durationpb.Duration {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_DurationValue); ok {
+			return x.DurationValue
+		}
+	}
+	return nil
+}
+
+func (x *TypedValue) GetUrlValue() string {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_UrlValue); ok {
+			return x.UrlValue
+		}
+	}
+	return ""
+}
+
+func (x *TypedValue) GetJsonValue() string {
+	if x != nil {
+		if x, ok := x.Kind.(*TypedValue_JsonValue); ok {
+			return x.JsonValue
+		}
+	}
+	return ""
+}
+
+type isTypedValue_Kind interface {
+	isTypedValue_Kind()
+}
+
+type TypedValue_IntegerValue struct {
+	// Integer value.
+	IntegerValue int64 `protobuf:"varint,1,opt,name=integer_value,json=integerValue,proto3,oneof"`
+}
+
+type TypedValue_NumberValue struct {
+	// Floating-point number value.
+	NumberValue float64 `protobuf:"fixed64,2,opt,name=number_value,json=numberValue,proto3,oneof"`
+}
+
+type TypedValue_StringValue struct {
+	// Free-form string value.
+	StringValue string `protobuf:"bytes,3,opt,name=string_value,json=stringValue,proto3,oneof"`
+}
+
+type TypedValue_BoolValue struct {
+	// Boolean value.
+	BoolValue bool `protobuf:"varint,4,opt,name=bool_value,json=boolValue,proto3,oneof"`
+}
+
+type TypedValue_TimeValue struct {
+	// Timestamp value.
+	TimeValue *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=time_value,json=timeValue,proto3,oneof"`
+}
+
+type TypedValue_DurationValue struct {
+	// Duration value.
+	DurationValue *durationpb.Duration `protobuf:"bytes,6,opt,name=duration_value,json=durationValue,proto3,oneof"`
+}
+
+type TypedValue_UrlValue struct {
+	// URL value (must be a valid absolute URL).
+	UrlValue string `protobuf:"bytes,7,opt,name=url_value,json=urlValue,proto3,oneof"`
+}
+
+type TypedValue_JsonValue struct {
+	// JSON value (must be valid JSON).
+	JsonValue string `protobuf:"bytes,8,opt,name=json_value,json=jsonValue,proto3,oneof"`
+}
+
+func (*TypedValue_IntegerValue) isTypedValue_Kind() {}
+
+func (*TypedValue_NumberValue) isTypedValue_Kind() {}
+
+func (*TypedValue_StringValue) isTypedValue_Kind() {}
+
+func (*TypedValue_BoolValue) isTypedValue_Kind() {}
+
+func (*TypedValue_TimeValue) isTypedValue_Kind() {}
+
+func (*TypedValue_DurationValue) isTypedValue_Kind() {}
+
+func (*TypedValue_UrlValue) isTypedValue_Kind() {}
+
+func (*TypedValue_JsonValue) isTypedValue_Kind() {}
+
 // ConfigValue represents a single configuration value at a point in time.
 type ConfigValue struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Dot-separated field path (e.g. "payments.fee").
 	FieldPath string `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	// The value, encoded as a string regardless of field type.
-	// See FieldType for encoding conventions per type.
-	// Absent (nil) when the field value is null.
-	Value *string `protobuf:"bytes,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
+	// The typed value. Absent when the field value is null.
+	Value *TypedValue `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	// SHA-256 checksum of the value. Used for optimistic concurrency control
 	// in SetField/SetFields via expected_checksum.
 	Checksum string `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
@@ -619,7 +805,7 @@ type ConfigValue struct {
 
 func (x *ConfigValue) Reset() {
 	*x = ConfigValue{}
-	mi := &file_centralconfig_v1_types_proto_msgTypes[5]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +817,7 @@ func (x *ConfigValue) String() string {
 func (*ConfigValue) ProtoMessage() {}
 
 func (x *ConfigValue) ProtoReflect() protoreflect.Message {
-	mi := &file_centralconfig_v1_types_proto_msgTypes[5]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +830,7 @@ func (x *ConfigValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigValue.ProtoReflect.Descriptor instead.
 func (*ConfigValue) Descriptor() ([]byte, []int) {
-	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{5}
+	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ConfigValue) GetFieldPath() string {
@@ -654,11 +840,11 @@ func (x *ConfigValue) GetFieldPath() string {
 	return ""
 }
 
-func (x *ConfigValue) GetValue() string {
-	if x != nil && x.Value != nil {
-		return *x.Value
+func (x *ConfigValue) GetValue() *TypedValue {
+	if x != nil {
+		return x.Value
 	}
-	return ""
+	return nil
 }
 
 func (x *ConfigValue) GetChecksum() string {
@@ -699,7 +885,7 @@ type ConfigVersion struct {
 
 func (x *ConfigVersion) Reset() {
 	*x = ConfigVersion{}
-	mi := &file_centralconfig_v1_types_proto_msgTypes[6]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -711,7 +897,7 @@ func (x *ConfigVersion) String() string {
 func (*ConfigVersion) ProtoMessage() {}
 
 func (x *ConfigVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_centralconfig_v1_types_proto_msgTypes[6]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -724,7 +910,7 @@ func (x *ConfigVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigVersion.ProtoReflect.Descriptor instead.
 func (*ConfigVersion) Descriptor() ([]byte, []int) {
-	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{6}
+	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ConfigVersion) GetId() string {
@@ -784,7 +970,7 @@ type Config struct {
 
 func (x *Config) Reset() {
 	*x = Config{}
-	mi := &file_centralconfig_v1_types_proto_msgTypes[7]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -796,7 +982,7 @@ func (x *Config) String() string {
 func (*Config) ProtoMessage() {}
 
 func (x *Config) ProtoReflect() protoreflect.Message {
-	mi := &file_centralconfig_v1_types_proto_msgTypes[7]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -809,7 +995,7 @@ func (x *Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Config.ProtoReflect.Descriptor instead.
 func (*Config) Descriptor() ([]byte, []int) {
-	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{7}
+	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Config) GetTenantId() string {
@@ -843,10 +1029,10 @@ type ConfigChange struct {
 	Version int32 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
 	// The field that was changed.
 	FieldPath string `protobuf:"bytes,3,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	// The previous value. Absent (nil) if field was newly created or was null.
-	OldValue *string `protobuf:"bytes,4,opt,name=old_value,json=oldValue,proto3,oneof" json:"old_value,omitempty"`
-	// The new value. Absent (nil) if field was set to null.
-	NewValue *string `protobuf:"bytes,5,opt,name=new_value,json=newValue,proto3,oneof" json:"new_value,omitempty"`
+	// The previous value. Absent if field was newly created or was null.
+	OldValue *TypedValue `protobuf:"bytes,4,opt,name=old_value,json=oldValue,proto3" json:"old_value,omitempty"`
+	// The new value. Absent if field was set to null.
+	NewValue *TypedValue `protobuf:"bytes,5,opt,name=new_value,json=newValue,proto3" json:"new_value,omitempty"`
 	// The actor who made the change.
 	ChangedBy string `protobuf:"bytes,6,opt,name=changed_by,json=changedBy,proto3" json:"changed_by,omitempty"`
 	// When the change occurred.
@@ -857,7 +1043,7 @@ type ConfigChange struct {
 
 func (x *ConfigChange) Reset() {
 	*x = ConfigChange{}
-	mi := &file_centralconfig_v1_types_proto_msgTypes[8]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -869,7 +1055,7 @@ func (x *ConfigChange) String() string {
 func (*ConfigChange) ProtoMessage() {}
 
 func (x *ConfigChange) ProtoReflect() protoreflect.Message {
-	mi := &file_centralconfig_v1_types_proto_msgTypes[8]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -882,7 +1068,7 @@ func (x *ConfigChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigChange.ProtoReflect.Descriptor instead.
 func (*ConfigChange) Descriptor() ([]byte, []int) {
-	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{8}
+	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ConfigChange) GetTenantId() string {
@@ -906,18 +1092,18 @@ func (x *ConfigChange) GetFieldPath() string {
 	return ""
 }
 
-func (x *ConfigChange) GetOldValue() string {
-	if x != nil && x.OldValue != nil {
-		return *x.OldValue
+func (x *ConfigChange) GetOldValue() *TypedValue {
+	if x != nil {
+		return x.OldValue
 	}
-	return ""
+	return nil
 }
 
-func (x *ConfigChange) GetNewValue() string {
-	if x != nil && x.NewValue != nil {
-		return *x.NewValue
+func (x *ConfigChange) GetNewValue() *TypedValue {
+	if x != nil {
+		return x.NewValue
 	}
-	return ""
+	return nil
 }
 
 func (x *ConfigChange) GetChangedBy() string {
@@ -964,7 +1150,7 @@ type AuditEntry struct {
 
 func (x *AuditEntry) Reset() {
 	*x = AuditEntry{}
-	mi := &file_centralconfig_v1_types_proto_msgTypes[9]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -976,7 +1162,7 @@ func (x *AuditEntry) String() string {
 func (*AuditEntry) ProtoMessage() {}
 
 func (x *AuditEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_centralconfig_v1_types_proto_msgTypes[9]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -989,7 +1175,7 @@ func (x *AuditEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditEntry.ProtoReflect.Descriptor instead.
 func (*AuditEntry) Descriptor() ([]byte, []int) {
-	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{9}
+	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AuditEntry) GetId() string {
@@ -1074,7 +1260,7 @@ type UsageStats struct {
 
 func (x *UsageStats) Reset() {
 	*x = UsageStats{}
-	mi := &file_centralconfig_v1_types_proto_msgTypes[10]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1086,7 +1272,7 @@ func (x *UsageStats) String() string {
 func (*UsageStats) ProtoMessage() {}
 
 func (x *UsageStats) ProtoReflect() protoreflect.Message {
-	mi := &file_centralconfig_v1_types_proto_msgTypes[10]
+	mi := &file_centralconfig_v1_types_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1099,7 +1285,7 @@ func (x *UsageStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UsageStats.ProtoReflect.Descriptor instead.
 func (*UsageStats) Descriptor() ([]byte, []int) {
-	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{10}
+	return file_centralconfig_v1_types_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UsageStats) GetTenantId() string {
@@ -1141,7 +1327,7 @@ var File_centralconfig_v1_types_proto protoreflect.FileDescriptor
 
 const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x1ccentralconfig/v1/types.proto\x12\x10centralconfig.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
+	"\x1ccentralconfig/v1/types.proto\x12\x10centralconfig.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
 	"\x10FieldConstraints\x12\x15\n" +
 	"\x03min\x18\x01 \x01(\x01H\x00R\x03min\x88\x01\x01\x12\x15\n" +
 	"\x03max\x18\x02 \x01(\x01H\x01R\x03max\x88\x01\x01\x12\x19\n" +
@@ -1196,14 +1382,27 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"field_path\x18\x02 \x01(\tR\tfieldPath\x12#\n" +
-	"\rlocked_values\x18\x03 \x03(\tR\flockedValues\"\xa4\x01\n" +
+	"\rlocked_values\x18\x03 \x03(\tR\flockedValues\"\xe7\x02\n" +
+	"\n" +
+	"TypedValue\x12%\n" +
+	"\rinteger_value\x18\x01 \x01(\x03H\x00R\fintegerValue\x12#\n" +
+	"\fnumber_value\x18\x02 \x01(\x01H\x00R\vnumberValue\x12#\n" +
+	"\fstring_value\x18\x03 \x01(\tH\x00R\vstringValue\x12\x1f\n" +
+	"\n" +
+	"bool_value\x18\x04 \x01(\bH\x00R\tboolValue\x12;\n" +
+	"\n" +
+	"time_value\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\ttimeValue\x12B\n" +
+	"\x0eduration_value\x18\x06 \x01(\v2\x19.google.protobuf.DurationH\x00R\rdurationValue\x12\x1d\n" +
+	"\turl_value\x18\a \x01(\tH\x00R\burlValue\x12\x1f\n" +
+	"\n" +
+	"json_value\x18\b \x01(\tH\x00R\tjsonValueB\x06\n" +
+	"\x04kind\"\xb3\x01\n" +
 	"\vConfigValue\x12\x1d\n" +
 	"\n" +
-	"field_path\x18\x01 \x01(\tR\tfieldPath\x12\x19\n" +
-	"\x05value\x18\x02 \x01(\tH\x00R\x05value\x88\x01\x01\x12\x1a\n" +
+	"field_path\x18\x01 \x01(\tR\tfieldPath\x122\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.centralconfig.v1.TypedValueR\x05value\x12\x1a\n" +
 	"\bchecksum\x18\x03 \x01(\tR\bchecksum\x12%\n" +
-	"\vdescription\x18\x04 \x01(\tH\x01R\vdescription\x88\x01\x01B\b\n" +
-	"\x06_valueB\x0e\n" +
+	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01B\x0e\n" +
 	"\f_description\"\xd2\x01\n" +
 	"\rConfigVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -1217,22 +1416,18 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\x06Config\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x125\n" +
-	"\x06values\x18\x03 \x03(\v2\x1d.centralconfig.v1.ConfigValueR\x06values\"\x9e\x02\n" +
+	"\x06values\x18\x03 \x03(\v2\x1d.centralconfig.v1.ConfigValueR\x06values\"\xb4\x02\n" +
 	"\fConfigChange\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x12\x1d\n" +
 	"\n" +
-	"field_path\x18\x03 \x01(\tR\tfieldPath\x12 \n" +
-	"\told_value\x18\x04 \x01(\tH\x00R\boldValue\x88\x01\x01\x12 \n" +
-	"\tnew_value\x18\x05 \x01(\tH\x01R\bnewValue\x88\x01\x01\x12\x1d\n" +
+	"field_path\x18\x03 \x01(\tR\tfieldPath\x129\n" +
+	"\told_value\x18\x04 \x01(\v2\x1c.centralconfig.v1.TypedValueR\boldValue\x129\n" +
+	"\tnew_value\x18\x05 \x01(\v2\x1c.centralconfig.v1.TypedValueR\bnewValue\x12\x1d\n" +
 	"\n" +
 	"changed_by\x18\x06 \x01(\tR\tchangedBy\x129\n" +
 	"\n" +
-	"changed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAtB\f\n" +
-	"\n" +
-	"_old_valueB\f\n" +
-	"\n" +
-	"_new_value\"\xf4\x02\n" +
+	"changed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\"\xf4\x02\n" +
 	"\n" +
 	"AuditEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -1291,7 +1486,7 @@ func file_centralconfig_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_centralconfig_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_centralconfig_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_centralconfig_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_centralconfig_v1_types_proto_goTypes = []any{
 	(FieldType)(0),                // 0: centralconfig.v1.FieldType
 	(*FieldConstraints)(nil),      // 1: centralconfig.v1.FieldConstraints
@@ -1299,31 +1494,38 @@ var file_centralconfig_v1_types_proto_goTypes = []any{
 	(*Schema)(nil),                // 3: centralconfig.v1.Schema
 	(*Tenant)(nil),                // 4: centralconfig.v1.Tenant
 	(*FieldLock)(nil),             // 5: centralconfig.v1.FieldLock
-	(*ConfigValue)(nil),           // 6: centralconfig.v1.ConfigValue
-	(*ConfigVersion)(nil),         // 7: centralconfig.v1.ConfigVersion
-	(*Config)(nil),                // 8: centralconfig.v1.Config
-	(*ConfigChange)(nil),          // 9: centralconfig.v1.ConfigChange
-	(*AuditEntry)(nil),            // 10: centralconfig.v1.AuditEntry
-	(*UsageStats)(nil),            // 11: centralconfig.v1.UsageStats
-	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
+	(*TypedValue)(nil),            // 6: centralconfig.v1.TypedValue
+	(*ConfigValue)(nil),           // 7: centralconfig.v1.ConfigValue
+	(*ConfigVersion)(nil),         // 8: centralconfig.v1.ConfigVersion
+	(*Config)(nil),                // 9: centralconfig.v1.Config
+	(*ConfigChange)(nil),          // 10: centralconfig.v1.ConfigChange
+	(*AuditEntry)(nil),            // 11: centralconfig.v1.AuditEntry
+	(*UsageStats)(nil),            // 12: centralconfig.v1.UsageStats
+	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),   // 14: google.protobuf.Duration
 }
 var file_centralconfig_v1_types_proto_depIdxs = []int32{
 	0,  // 0: centralconfig.v1.SchemaField.type:type_name -> centralconfig.v1.FieldType
 	1,  // 1: centralconfig.v1.SchemaField.constraints:type_name -> centralconfig.v1.FieldConstraints
 	2,  // 2: centralconfig.v1.Schema.fields:type_name -> centralconfig.v1.SchemaField
-	12, // 3: centralconfig.v1.Schema.created_at:type_name -> google.protobuf.Timestamp
-	12, // 4: centralconfig.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
-	12, // 5: centralconfig.v1.Tenant.updated_at:type_name -> google.protobuf.Timestamp
-	12, // 6: centralconfig.v1.ConfigVersion.created_at:type_name -> google.protobuf.Timestamp
-	6,  // 7: centralconfig.v1.Config.values:type_name -> centralconfig.v1.ConfigValue
-	12, // 8: centralconfig.v1.ConfigChange.changed_at:type_name -> google.protobuf.Timestamp
-	12, // 9: centralconfig.v1.AuditEntry.created_at:type_name -> google.protobuf.Timestamp
-	12, // 10: centralconfig.v1.UsageStats.last_read_at:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	13, // 3: centralconfig.v1.Schema.created_at:type_name -> google.protobuf.Timestamp
+	13, // 4: centralconfig.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
+	13, // 5: centralconfig.v1.Tenant.updated_at:type_name -> google.protobuf.Timestamp
+	13, // 6: centralconfig.v1.TypedValue.time_value:type_name -> google.protobuf.Timestamp
+	14, // 7: centralconfig.v1.TypedValue.duration_value:type_name -> google.protobuf.Duration
+	6,  // 8: centralconfig.v1.ConfigValue.value:type_name -> centralconfig.v1.TypedValue
+	13, // 9: centralconfig.v1.ConfigVersion.created_at:type_name -> google.protobuf.Timestamp
+	7,  // 10: centralconfig.v1.Config.values:type_name -> centralconfig.v1.ConfigValue
+	6,  // 11: centralconfig.v1.ConfigChange.old_value:type_name -> centralconfig.v1.TypedValue
+	6,  // 12: centralconfig.v1.ConfigChange.new_value:type_name -> centralconfig.v1.TypedValue
+	13, // 13: centralconfig.v1.ConfigChange.changed_at:type_name -> google.protobuf.Timestamp
+	13, // 14: centralconfig.v1.AuditEntry.created_at:type_name -> google.protobuf.Timestamp
+	13, // 15: centralconfig.v1.UsageStats.last_read_at:type_name -> google.protobuf.Timestamp
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_centralconfig_v1_types_proto_init() }
@@ -1334,17 +1536,26 @@ func file_centralconfig_v1_types_proto_init() {
 	file_centralconfig_v1_types_proto_msgTypes[0].OneofWrappers = []any{}
 	file_centralconfig_v1_types_proto_msgTypes[1].OneofWrappers = []any{}
 	file_centralconfig_v1_types_proto_msgTypes[2].OneofWrappers = []any{}
-	file_centralconfig_v1_types_proto_msgTypes[5].OneofWrappers = []any{}
-	file_centralconfig_v1_types_proto_msgTypes[8].OneofWrappers = []any{}
-	file_centralconfig_v1_types_proto_msgTypes[9].OneofWrappers = []any{}
+	file_centralconfig_v1_types_proto_msgTypes[5].OneofWrappers = []any{
+		(*TypedValue_IntegerValue)(nil),
+		(*TypedValue_NumberValue)(nil),
+		(*TypedValue_StringValue)(nil),
+		(*TypedValue_BoolValue)(nil),
+		(*TypedValue_TimeValue)(nil),
+		(*TypedValue_DurationValue)(nil),
+		(*TypedValue_UrlValue)(nil),
+		(*TypedValue_JsonValue)(nil),
+	}
+	file_centralconfig_v1_types_proto_msgTypes[6].OneofWrappers = []any{}
 	file_centralconfig_v1_types_proto_msgTypes[10].OneofWrappers = []any{}
+	file_centralconfig_v1_types_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_centralconfig_v1_types_proto_rawDesc), len(file_centralconfig_v1_types_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

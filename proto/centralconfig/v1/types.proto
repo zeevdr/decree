@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package centralconfig.v1;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
 // FieldType enumerates the supported configuration value types.
-// All values are stored as strings; the type controls validation and
-// constraint interpretation.
+// Each type maps to a specific field in the TypedValue oneof.
 enum FieldType {
   FIELD_TYPE_UNSPECIFIED = 0;
   // Integer value. Encoded as a decimal string (e.g. "42", "-1").
@@ -163,15 +163,36 @@ message FieldLock {
   repeated string locked_values = 3;
 }
 
+// TypedValue holds a configuration value with its native type.
+// An unset oneof (no field present) represents a null value.
+message TypedValue {
+  oneof kind {
+    // Integer value.
+    int64 integer_value = 1;
+    // Floating-point number value.
+    double number_value = 2;
+    // Free-form string value.
+    string string_value = 3;
+    // Boolean value.
+    bool bool_value = 4;
+    // Timestamp value.
+    google.protobuf.Timestamp time_value = 5;
+    // Duration value.
+    google.protobuf.Duration duration_value = 6;
+    // URL value (must be a valid absolute URL).
+    string url_value = 7;
+    // JSON value (must be valid JSON).
+    string json_value = 8;
+  }
+}
+
 // ConfigValue represents a single configuration value at a point in time.
 message ConfigValue {
   // Dot-separated field path (e.g. "payments.fee").
   string field_path = 1;
 
-  // The value, encoded as a string regardless of field type.
-  // See FieldType for encoding conventions per type.
-  // Absent (nil) when the field value is null.
-  optional string value = 2;
+  // The typed value. Absent when the field value is null.
+  TypedValue value = 2;
 
   // SHA-256 checksum of the value. Used for optimistic concurrency control
   // in SetField/SetFields via expected_checksum.
@@ -230,11 +251,11 @@ message ConfigChange {
   // The field that was changed.
   string field_path = 3;
 
-  // The previous value. Absent (nil) if field was newly created or was null.
-  optional string old_value = 4;
+  // The previous value. Absent if field was newly created or was null.
+  TypedValue old_value = 4;
 
-  // The new value. Absent (nil) if field was set to null.
-  optional string new_value = 5;
+  // The new value. Absent if field was set to null.
+  TypedValue new_value = 5;
 
   // The actor who made the change.
   string changed_by = 6;

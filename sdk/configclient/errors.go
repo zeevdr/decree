@@ -25,6 +25,10 @@ var (
 
 	// ErrAlreadyExists is returned when attempting to create a resource that already exists.
 	ErrAlreadyExists = errors.New("already exists")
+
+	// ErrTypeMismatch is returned when a typed getter is called on a field
+	// whose value type doesn't match (e.g. GetInt on a string field).
+	ErrTypeMismatch = errors.New("value type mismatch")
 )
 
 // mapError converts gRPC status errors to sentinel errors.

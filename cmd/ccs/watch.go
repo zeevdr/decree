@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -9,6 +10,39 @@ import (
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
 	"google.golang.org/grpc/metadata"
 )
+
+// typedValueDisplay returns a human-readable string for a TypedValue.
+func typedValueDisplay(tv *pb.TypedValue) string {
+	if tv == nil {
+		return "<null>"
+	}
+	switch v := tv.Kind.(type) {
+	case *pb.TypedValue_StringValue:
+		return v.StringValue
+	case *pb.TypedValue_IntegerValue:
+		return fmt.Sprintf("%d", v.IntegerValue)
+	case *pb.TypedValue_NumberValue:
+		return strconv.FormatFloat(v.NumberValue, 'f', -1, 64)
+	case *pb.TypedValue_BoolValue:
+		return strconv.FormatBool(v.BoolValue)
+	case *pb.TypedValue_UrlValue:
+		return v.UrlValue
+	case *pb.TypedValue_JsonValue:
+		return v.JsonValue
+	case *pb.TypedValue_TimeValue:
+		if v.TimeValue != nil {
+			return v.TimeValue.AsTime().Format(time.RFC3339Nano)
+		}
+		return ""
+	case *pb.TypedValue_DurationValue:
+		if v.DurationValue != nil {
+			return v.DurationValue.AsDuration().String()
+		}
+		return ""
+	default:
+		return ""
+	}
+}
 
 var watchCmd = &cobra.Command{
 	Use:   "watch <tenant-id> [field-paths...]",
@@ -61,10 +95,10 @@ var watchCmd = &cobra.Command{
 			ts := time.Now().Format("15:04:05")
 			old, new_ := "<null>", "<null>"
 			if c.OldValue != nil {
-				old = *c.OldValue
+				old = typedValueDisplay(c.OldValue)
 			}
 			if c.NewValue != nil {
-				new_ = *c.NewValue
+				new_ = typedValueDisplay(c.NewValue)
 			}
 			fmt.Printf("[%s] v%d %s: %q → %q (by %s)\n", ts, c.Version, c.FieldPath, old, new_, c.ChangedBy)
 		}

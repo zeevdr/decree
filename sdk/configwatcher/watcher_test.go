@@ -17,6 +17,10 @@ import (
 
 func sp(s string) *string { return &s }
 
+func sv(s string) *pb.TypedValue {
+	return &pb.TypedValue{Kind: &pb.TypedValue_StringValue{StringValue: s}}
+}
+
 // --- Value unit tests ---
 
 func TestValue_Get_Default(t *testing.T) {
@@ -193,8 +197,8 @@ func TestWatcher_SnapshotAndStream(t *testing.T) {
 	// Mock snapshot (GetConfig for configclient.GetAll).
 	rpc.On("GetConfig", mock.Anything, mock.Anything).Return(&pb.GetConfigResponse{
 		Config: &pb.Config{TenantId: "t1", Version: 1, Values: []*pb.ConfigValue{
-			{FieldPath: "payments.fee", Value: sp("0.025")},
-			{FieldPath: "payments.enabled", Value: sp("true")},
+			{FieldPath: "payments.fee", Value: sv("0.025")},
+			{FieldPath: "payments.enabled", Value: sv("true")},
 		}},
 	}, nil)
 
@@ -214,8 +218,8 @@ func TestWatcher_SnapshotAndStream(t *testing.T) {
 	stream.send(&pb.ConfigChange{
 		TenantId:  "t1",
 		FieldPath: "payments.fee",
-		OldValue:  sp("0.025"),
-		NewValue:  sp("0.05"),
+		OldValue:  sv("0.025"),
+		NewValue:  sv("0.05"),
 	})
 
 	// Wait for change to propagate.

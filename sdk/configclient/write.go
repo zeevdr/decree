@@ -6,14 +6,26 @@ import (
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
 )
 
-// Set writes a single configuration value.
+// Set writes a single configuration value as a string.
 // Creates a new config version atomically.
 // Returns [ErrLocked] if the field is locked.
 func (c *Client) Set(ctx context.Context, tenantID, fieldPath, value string) error {
 	_, err := c.rpc.SetField(c.withAuth(ctx), &pb.SetFieldRequest{
 		TenantId:  tenantID,
 		FieldPath: fieldPath,
-		Value:     &value,
+		Value:     StringValue(value),
+	})
+	return mapError(err)
+}
+
+// SetTyped writes a single typed configuration value.
+// Creates a new config version atomically.
+// Returns [ErrLocked] if the field is locked.
+func (c *Client) SetTyped(ctx context.Context, tenantID, fieldPath string, value *pb.TypedValue) error {
+	_, err := c.rpc.SetField(c.withAuth(ctx), &pb.SetFieldRequest{
+		TenantId:  tenantID,
+		FieldPath: fieldPath,
+		Value:     value,
 	})
 	return mapError(err)
 }
@@ -36,10 +48,9 @@ func (c *Client) SetNull(ctx context.Context, tenantID, fieldPath string) error 
 func (c *Client) SetMany(ctx context.Context, tenantID string, values map[string]string, description string) error {
 	updates := make([]*pb.FieldUpdate, 0, len(values))
 	for path, val := range values {
-		v := val
 		updates = append(updates, &pb.FieldUpdate{
 			FieldPath: path,
-			Value:     &v,
+			Value:     StringValue(val),
 		})
 	}
 	req := &pb.SetFieldsRequest{
@@ -85,7 +96,7 @@ func (c *Client) GetForUpdate(ctx context.Context, tenantID, fieldPath string) (
 	}
 	return &LockedValue{
 		FieldPath: fieldPath,
-		Value:     derefString(resp.Value.Value),
+		Value:     typedValueToString(resp.Value.Value),
 		Checksum:  resp.Value.Checksum,
 		tenantID:  tenantID,
 	}, nil
@@ -98,7 +109,7 @@ func (lv *LockedValue) Set(ctx context.Context, client *Client, newValue string)
 	_, err := client.rpc.SetField(client.withAuth(ctx), &pb.SetFieldRequest{
 		TenantId:         lv.tenantID,
 		FieldPath:        lv.FieldPath,
-		Value:            &newValue,
+		Value:            StringValue(newValue),
 		ExpectedChecksum: &lv.Checksum,
 	})
 	return mapError(err)

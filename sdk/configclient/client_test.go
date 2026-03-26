@@ -16,6 +16,22 @@ import (
 
 func sp(s string) *string { return &s }
 
+func sv(s string) *pb.TypedValue {
+	return &pb.TypedValue{Kind: &pb.TypedValue_StringValue{StringValue: s}}
+}
+
+func iv(n int64) *pb.TypedValue {
+	return &pb.TypedValue{Kind: &pb.TypedValue_IntegerValue{IntegerValue: n}}
+}
+
+func fv(n float64) *pb.TypedValue {
+	return &pb.TypedValue{Kind: &pb.TypedValue_NumberValue{NumberValue: n}}
+}
+
+func bv(b bool) *pb.TypedValue {
+	return &pb.TypedValue{Kind: &pb.TypedValue_BoolValue{BoolValue: b}}
+}
+
 // --- Mock ---
 
 type mockRPC struct {
@@ -87,7 +103,7 @@ func TestGet_Success(t *testing.T) {
 	rpc.On("GetField", mock.Anything, mock.MatchedBy(func(r *pb.GetFieldRequest) bool {
 		return r.TenantId == "t1" && r.FieldPath == "payments.fee"
 	})).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "payments.fee", Value: sp("0.5%"), Checksum: "abc"},
+		Value: &pb.ConfigValue{FieldPath: "payments.fee", Value: sv("0.5%"), Checksum: "abc"},
 	}, nil)
 
 	val, err := client.Get(ctx, "t1", "payments.fee")
@@ -119,8 +135,8 @@ func TestGetAll_Success(t *testing.T) {
 			TenantId: "t1",
 			Version:  3,
 			Values: []*pb.ConfigValue{
-				{FieldPath: "a", Value: sp("1")},
-				{FieldPath: "b", Value: sp("2")},
+				{FieldPath: "a", Value: sv("1")},
+				{FieldPath: "b", Value: sv("2")},
 			},
 		},
 	}, nil)
@@ -138,7 +154,7 @@ func TestSet_Success(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
-		return r.TenantId == "t1" && r.FieldPath == "a" && r.Value != nil && *r.Value == "new"
+		return r.TenantId == "t1" && r.FieldPath == "a" && r.Value != nil && typedValueToString(r.Value) == "new"
 	})).Return(&pb.SetFieldResponse{}, nil)
 
 	err := client.Set(ctx, "t1", "a", "new")
@@ -194,7 +210,7 @@ func TestSnapshot_PinnedVersion(t *testing.T) {
 	rpc.On("GetField", mock.Anything, mock.MatchedBy(func(r *pb.GetFieldRequest) bool {
 		return r.Version != nil && *r.Version == v
 	})).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "a", Value: sp("val")},
+		Value: &pb.ConfigValue{FieldPath: "a", Value: sv("val")},
 	}, nil)
 
 	val, err := snap.Get(ctx, "a")
@@ -215,7 +231,7 @@ func TestAtVersion(t *testing.T) {
 		return r.Version != nil && *r.Version == v
 	})).Return(&pb.GetConfigResponse{
 		Config: &pb.Config{TenantId: "t1", Version: 3, Values: []*pb.ConfigValue{
-			{FieldPath: "x", Value: sp("y")},
+			{FieldPath: "x", Value: sv("y")},
 		}},
 	}, nil)
 
@@ -232,7 +248,7 @@ func TestGetForUpdate_ThenSet(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "a", Value: sp("old"), Checksum: "chk123"},
+		Value: &pb.ConfigValue{FieldPath: "a", Value: sv("old"), Checksum: "chk123"},
 	}, nil)
 
 	lv, err := client.GetForUpdate(ctx, "t1", "a")
@@ -242,7 +258,7 @@ func TestGetForUpdate_ThenSet(t *testing.T) {
 
 	// Write with checksum
 	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
-		return r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk123" && r.Value != nil && *r.Value == "new"
+		return r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk123" && r.Value != nil && typedValueToString(r.Value) == "new"
 	})).Return(&pb.SetFieldResponse{}, nil)
 
 	err = lv.Set(ctx, client, "new")
@@ -255,7 +271,7 @@ func TestGetForUpdate_ChecksumMismatch(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "a", Value: sp("old"), Checksum: "stale"},
+		Value: &pb.ConfigValue{FieldPath: "a", Value: sv("old"), Checksum: "stale"},
 	}, nil)
 
 	lv, err := client.GetForUpdate(ctx, "t1", "a")
@@ -276,11 +292,11 @@ func TestUpdate_Success(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "counter", Value: sp("5"), Checksum: "chk"},
+		Value: &pb.ConfigValue{FieldPath: "counter", Value: sv("5"), Checksum: "chk"},
 	}, nil)
 
 	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
-		return r.Value != nil && *r.Value == "6" && r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk"
+		return r.Value != nil && typedValueToString(r.Value) == "6" && r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk"
 	})).Return(&pb.SetFieldResponse{}, nil)
 
 	err := client.Update(ctx, "t1", "counter", func(current string) (string, error) {
@@ -288,4 +304,242 @@ func TestUpdate_Success(t *testing.T) {
 		return "6", nil
 	})
 	require.NoError(t, err)
+}
+
+// --- Typed getters ---
+
+func TestGetInt_Success(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "retries", Value: iv(42)},
+	}, nil)
+
+	val, err := client.GetInt(ctx, "t1", "retries")
+	require.NoError(t, err)
+	assert.Equal(t, int64(42), val)
+}
+
+func TestGetInt_TypeMismatch(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "name", Value: sv("hello")},
+	}, nil)
+
+	_, err := client.GetInt(ctx, "t1", "name")
+	assert.ErrorIs(t, err, ErrTypeMismatch)
+}
+
+func TestGetFloat_Success(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "rate", Value: fv(3.14)},
+	}, nil)
+
+	val, err := client.GetFloat(ctx, "t1", "rate")
+	require.NoError(t, err)
+	assert.Equal(t, 3.14, val)
+}
+
+func TestGetBool_Success(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "enabled", Value: bv(true)},
+	}, nil)
+
+	val, err := client.GetBool(ctx, "t1", "enabled")
+	require.NoError(t, err)
+	assert.True(t, val)
+}
+
+func TestGetBool_TypeMismatch(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "x", Value: iv(42)},
+	}, nil)
+
+	_, err := client.GetBool(ctx, "t1", "x")
+	assert.ErrorIs(t, err, ErrTypeMismatch)
+}
+
+func TestGetString_AcceptsStringURLJSON(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	// string type
+	rpc.On("GetField", mock.Anything, mock.MatchedBy(func(r *pb.GetFieldRequest) bool {
+		return r.FieldPath == "s"
+	})).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "s", Value: sv("hello")},
+	}, nil)
+
+	val, err := client.GetString(ctx, "t1", "s")
+	require.NoError(t, err)
+	assert.Equal(t, "hello", val)
+}
+
+// --- Null handling ---
+
+func TestGetInt_Null(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	// Value is nil (null)
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "retries", Value: nil},
+	}, nil)
+
+	val, err := client.GetInt(ctx, "t1", "retries")
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), val) // zero value for null
+}
+
+func TestGetIntNullable_Null(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "retries", Value: nil},
+	}, nil)
+
+	val, err := client.GetIntNullable(ctx, "t1", "retries")
+	require.NoError(t, err)
+	assert.Nil(t, val)
+}
+
+func TestGetIntNullable_HasValue(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "retries", Value: iv(5)},
+	}, nil)
+
+	val, err := client.GetIntNullable(ctx, "t1", "retries")
+	require.NoError(t, err)
+	require.NotNil(t, val)
+	assert.Equal(t, int64(5), *val)
+}
+
+func TestGetBoolNullable_Null(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "enabled", Value: nil},
+	}, nil)
+
+	val, err := client.GetBoolNullable(ctx, "t1", "enabled")
+	require.NoError(t, err)
+	assert.Nil(t, val)
+}
+
+func TestGetStringNullable_Null(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "name", Value: nil},
+	}, nil)
+
+	val, err := client.GetStringNullable(ctx, "t1", "name")
+	require.NoError(t, err)
+	assert.Nil(t, val)
+}
+
+func TestGetStringNullable_EmptyString(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
+		Value: &pb.ConfigValue{FieldPath: "name", Value: sv("")},
+	}, nil)
+
+	val, err := client.GetStringNullable(ctx, "t1", "name")
+	require.NoError(t, err)
+	require.NotNil(t, val)
+	assert.Equal(t, "", *val) // empty string, not null
+}
+
+// --- Typed setters ---
+
+func TestSetInt_Success(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
+		if r.Value == nil {
+			return false
+		}
+		v, ok := r.Value.Kind.(*pb.TypedValue_IntegerValue)
+		return ok && v.IntegerValue == 42
+	})).Return(&pb.SetFieldResponse{}, nil)
+
+	require.NoError(t, client.SetInt(ctx, "t1", "retries", 42))
+}
+
+func TestSetBool_Success(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
+		if r.Value == nil {
+			return false
+		}
+		v, ok := r.Value.Kind.(*pb.TypedValue_BoolValue)
+		return ok && v.BoolValue
+	})).Return(&pb.SetFieldResponse{}, nil)
+
+	require.NoError(t, client.SetBool(ctx, "t1", "enabled", true))
+}
+
+func TestSetFloat_Success(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
+		if r.Value == nil {
+			return false
+		}
+		v, ok := r.Value.Kind.(*pb.TypedValue_NumberValue)
+		return ok && v.NumberValue == 3.14
+	})).Return(&pb.SetFieldResponse{}, nil)
+
+	require.NoError(t, client.SetFloat(ctx, "t1", "rate", 3.14))
+}
+
+func TestSetNull_Success(t *testing.T) {
+	rpc := &mockRPC{}
+	client := New(rpc)
+	ctx := context.Background()
+
+	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
+		return r.Value == nil // null
+	})).Return(&pb.SetFieldResponse{}, nil)
+
+	require.NoError(t, client.SetNull(ctx, "t1", "retries"))
 }

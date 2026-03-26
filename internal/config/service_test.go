@@ -56,7 +56,7 @@ func TestGetConfig_CacheHit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, resp.Config.Values, 1)
 	assert.Equal(t, "payments.fee", resp.Config.Values[0].FieldPath)
-	assert.Equal(t, "0.5", derefString(resp.Config.Values[0].Value))
+	assert.Equal(t, "0.5", typedValueToDisplayString(resp.Config.Values[0].Value))
 	// Should not hit DB.
 	store.AssertNotCalled(t, "GetFullConfigAtVersion")
 	cache.AssertExpectations(t)
@@ -139,7 +139,7 @@ func TestSetField_Success(t *testing.T) {
 	resp, err := svc.SetField(ctx, &pb.SetFieldRequest{
 		TenantId:  tenantIDStr,
 		FieldPath: "payments.fee",
-		Value:     strPtr("0.5"),
+		Value:     &pb.TypedValue{Kind: &pb.TypedValue_StringValue{StringValue: "0.5"}},
 	})
 
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestSetField_ChecksumMismatch(t *testing.T) {
 	_, err := svc.SetField(ctx, &pb.SetFieldRequest{
 		TenantId:         tenantIDStr,
 		FieldPath:        "payments.fee",
-		Value:            strPtr("0.5"),
+		Value:            &pb.TypedValue{Kind: &pb.TypedValue_StringValue{StringValue: "0.5"}},
 		ExpectedChecksum: &wrongChecksum,
 	})
 
@@ -191,7 +191,7 @@ func TestSetField_LockedField(t *testing.T) {
 	_, err := svc.SetField(ctx, &pb.SetFieldRequest{
 		TenantId:  tenantIDStr,
 		FieldPath: "payments.fee",
-		Value:     strPtr("0.5"),
+		Value:     &pb.TypedValue{Kind: &pb.TypedValue_StringValue{StringValue: "0.5"}},
 	})
 
 	require.Error(t, err)
