@@ -10,16 +10,20 @@ import (
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-
-	"github.com/zeevdr/central-config-service/internal/auth"
 )
+
+// GRPCInterceptor provides unary and stream interceptors for gRPC.
+type GRPCInterceptor interface {
+	UnaryInterceptor() grpc.UnaryServerInterceptor
+	StreamInterceptor() grpc.StreamServerInterceptor
+}
 
 // Config holds the server configuration.
 type Config struct {
 	GRPCPort        string
 	EnableServices  []string
 	Logger          *slog.Logger
-	AuthInterceptor *auth.Interceptor
+	AuthInterceptor GRPCInterceptor
 }
 
 // Server wraps the gRPC server and health service.
@@ -37,12 +41,9 @@ func New(cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("listen on port %s: %w", cfg.GRPCPort, err)
 	}
 
-	var opts []grpc.ServerOption
-	if cfg.AuthInterceptor != nil {
-		opts = append(opts,
-			grpc.ChainUnaryInterceptor(cfg.AuthInterceptor.UnaryInterceptor()),
-			grpc.ChainStreamInterceptor(cfg.AuthInterceptor.StreamInterceptor()),
-		)
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(cfg.AuthInterceptor.UnaryInterceptor()),
+		grpc.ChainStreamInterceptor(cfg.AuthInterceptor.StreamInterceptor()),
 	}
 
 	grpcServer := grpc.NewServer(opts...)

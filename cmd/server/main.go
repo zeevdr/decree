@@ -63,17 +63,19 @@ func run() int {
 	defer func() { _ = subscriber.Close() }()
 
 	// Auth interceptor.
-	var authInterceptor *auth.Interceptor
+	var authInterceptor server.GRPCInterceptor
 	if cfg.JWTJWKSURL != "" {
-		authInterceptor, err = auth.NewInterceptor(ctx, cfg.JWTJWKSURL, cfg.JWTIssuer, logger)
-		if err != nil {
-			logger.ErrorContext(ctx, "failed to create auth interceptor", "error", err)
+		jwtInterceptor, jwtErr := auth.NewInterceptor(ctx, cfg.JWTJWKSURL, cfg.JWTIssuer, logger)
+		if jwtErr != nil {
+			logger.ErrorContext(ctx, "failed to create auth interceptor", "error", jwtErr)
 			return 1
 		}
-		defer authInterceptor.Close()
+		defer jwtInterceptor.Close()
+		authInterceptor = jwtInterceptor
 		logger.InfoContext(ctx, "JWT auth enabled", "jwks_url", cfg.JWTJWKSURL)
 	} else {
-		logger.WarnContext(ctx, "JWT auth disabled — no JWT_JWKS_URL configured")
+		authInterceptor = auth.NewMetadataInterceptor()
+		logger.InfoContext(ctx, "metadata auth enabled — pass x-subject, x-role, x-tenant-id headers")
 	}
 
 	// gRPC server.
