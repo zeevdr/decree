@@ -3,5 +3,5 @@ go 1.25.0
 use (
 	.
 	./api
-	./sdk
+	./sdk/configclient
 )

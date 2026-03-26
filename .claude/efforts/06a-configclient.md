@@ -1,6 +1,6 @@
 # SDK: configclient
 
-**Status:** Not Started
+**Status:** Complete
 **Parent:** 06-sdk
 
 ---
@@ -51,15 +51,17 @@ func (c *Client) Rollback(ctx context.Context, tenantID string, version int32) e
 
 ## Implementation Plan
 
-- [ ] Module setup (`sdk/configclient/go.mod`)
-- [ ] Client struct with functional options
-- [ ] Auth metadata injection (unary interceptor)
-- [ ] Read methods (Get, GetAll, GetFields, GetVersion)
-- [ ] Write methods (Set, SetMany)
-- [ ] Import/Export
-- [ ] Versioning (ListVersions, Rollback)
-- [ ] Error sentinel types
-- [ ] Unit tests (mock gRPC server or mock generated client)
+- [x] Module setup (`sdk/configclient/go.mod`)
+- [x] Client struct with functional options
+- [x] Auth metadata injection (per-call metadata via WithSubject/WithRole/WithTenantID/WithBearerToken)
+- [x] Read methods (Get, GetAll, GetFields)
+- [x] Snapshot reads (Snapshot, AtVersion — pinned version for flow consistency)
+- [x] Write methods (Set, SetMany)
+- [x] Optimistic concurrency (GetForUpdate + LockedValue.Set, Update convenience CAS)
+- [x] Error sentinel types (ErrNotFound, ErrLocked, ErrChecksumMismatch, ErrAlreadyExists)
+- [x] Unit tests — 11 tests with mock gRPC client
+
+Note: Import/Export, ListVersions, Rollback moved to adminclient (06b).
 
 ## Files
 
