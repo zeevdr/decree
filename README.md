@@ -8,77 +8,109 @@ Central Config Service manages **business-oriented configuration** — approval 
 
 Unlike tools like etcd, Consul, or Spring Cloud Config (which focus on system/infrastructure configuration), Central Config Service provides:
 
-- **Typed schemas** — define your config structure with types, validation, and constraints
+- **Typed values** — native proto types (integer, number, string, bool, timestamp, duration, url, json) with wire-level type safety
+- **Schema validation** — constraints (min/max, pattern, enum, JSON Schema) enforced on every write
 - **Multi-tenancy** — apply schemas to tenants with role-based access and field-level locking
 - **Versioned configs** — every change creates a version; rollback to any previous state
 - **Real-time subscriptions** — gRPC streaming pushes changes to consumers instantly
 - **Audit trail** — full history of who changed what, when, and why
 - **Import/Export** — portable schemas and configs in YAML format
 - **Optimistic concurrency** — safe read-modify-write with checksum validation
+- **Null support** — null and empty string are distinct values
 
-## Features
+## SDKs
 
-### Schema Management
+Three Go SDK packages, each an independent module:
 
-- Define config schemas with typed fields: `int`, `string`, `time`, `duration`, `url`, `json`
-- Hierarchical field namespacing (e.g., `payments.settlement.window`)
-- Field validation: min/max, regex, enum, JSON Schema for complex types
-- Nullable/required fields
-- Schema versioning with immutable published versions and parent version lineage
-- Schema and version descriptions for documentation
-- Field deprecation with read redirects for migrations
-- Schema import/export (YAML)
+```go
+// configclient — application runtime reads and writes
+client := configclient.New(rpc, configclient.WithSubject("myapp"))
+val, _ := client.GetInt(ctx, tenantID, "payments.retries")
+client.SetBool(ctx, tenantID, "payments.enabled", true)
 
-### Config Management
+// Snapshot for consistent reads within a flow
+snap, _ := client.Snapshot(ctx, tenantID)
+fee, _ := snap.Get(ctx, "payments.fee")
+currency, _ := snap.Get(ctx, "payments.currency")
 
-- Read and write config values with schema validation
-- Batch updates — modify multiple fields in a single version
-- Version descriptions — annotate changes with context
-- Value descriptions — document the meaning of individual values
-- Rollback to any previous version
-- Request a specific version for consistent reads within a flow
-- Config import/export (YAML)
+// Optimistic concurrency (compare-and-swap)
+client.Update(ctx, tenantID, "counter", func(current string) (string, error) {
+    n, _ := strconv.Atoi(current)
+    return strconv.Itoa(n + 1), nil
+})
 
-### Access Control
+// adminclient — schema, tenant, audit management
+admin := adminclient.New(schemaSvc, configSvc, auditSvc)
+schema, _ := admin.CreateSchema(ctx, "payments", fields, "")
+admin.PublishSchema(ctx, schema.ID, 1)
 
-| Role | Capabilities |
-|------|-------------|
-| **SuperAdmin** | Manage schemas, tenants, lock fields, full config access |
-| **Admin** | Read/write config values (unlocked fields) for assigned tenant |
-| **User** | Read-only config access for assigned tenant |
+// configwatcher — live typed values with auto-reconnect
+w := configwatcher.New(conn, tenantID)
+fee := w.Float("payments.fee", 0.01)
+enabled := w.Bool("payments.enabled", false)
+w.Start(ctx)
+fmt.Println(fee.Get())       // always fresh
+for change := range fee.Changes() { ... }
+```
 
-### Observability
+Install only what you need:
+```bash
+go get github.com/zeevdr/central-config-service/sdk/configclient@latest
+go get github.com/zeevdr/central-config-service/sdk/adminclient@latest
+go get github.com/zeevdr/central-config-service/sdk/configwatcher@latest
+```
 
-- OpenTelemetry tracing and metrics
-- Usage statistics — track which fields are read and how often
-- gRPC health checks for Kubernetes probes
+## CLI
+
+```bash
+go install github.com/zeevdr/central-config-service/cmd/ccs@latest
+
+ccs schema list
+ccs schema import schema.yaml
+ccs schema publish <schema-id> 1
+
+ccs tenant create --name acme --schema <id> --schema-version 1
+ccs config set <tenant-id> payments.fee 0.5%
+ccs config get-all <tenant-id>
+ccs config versions <tenant-id>
+ccs config rollback <tenant-id> 2
+
+ccs watch <tenant-id>                          # live stream
+ccs lock set <tenant-id> payments.currency     # lock field
+ccs audit query --tenant <tenant-id> --since 24h
+```
+
+Global flags: `--server`, `--subject`, `--role`, `--output table|json|yaml`
 
 ## Quick Start
 
 ### Docker Compose (local development)
 
 ```bash
-# Clone the repository
 git clone https://github.com/zeevdr/central-config-service.git
 cd central-config-service
 
-# Start the service with PostgreSQL and Redis
-docker compose up -d
-
-# Run database migrations
-make migrate
+# Start the full stack (PostgreSQL + Redis + migrations + service)
+docker compose up -d --wait service
 
 # The gRPC service is now available at localhost:9090
+# No JWT required — metadata auth is the default
 ```
 
-### Helm (Kubernetes)
+### Using the CLI
 
 ```bash
-helm install central-config-service deploy/helm/central-config-service \
-  --set database.writeUrl="postgres://user:pass@pg-primary:5432/centralconfig?sslmode=require" \
-  --set database.readUrl="postgres://user:pass@pg-replica:5432/centralconfig?sslmode=require" \
-  --set redis.url="redis://redis:6379" \
-  --set auth.jwksUrl="https://your-idp/.well-known/jwks.json"
+# Set auth identity
+export CCS_SUBJECT=admin@example.com
+
+# Create and publish a schema
+ccs schema import examples/schema.yaml
+ccs schema publish <schema-id> 1
+
+# Create a tenant and set config
+ccs tenant create --name acme --schema <schema-id> --schema-version 1
+ccs config set <tenant-id> payments.fee "0.5%"
+ccs config get-all <tenant-id>
 ```
 
 ## Architecture
@@ -99,13 +131,11 @@ helm install central-config-service deploy/helm/central-config-service \
                           └────────┘  └────────┘
 ```
 
-Single binary exposing three gRPC services. Deploy with `--enable-services` to control which services run on each instance — scale read-heavy config instances independently from schema management.
-
-See [system design docs](.claude/efforts/01-system-design.md) for detailed architecture.
+Single binary exposing three gRPC services. Deploy with `ENABLE_SERVICES` to control which services run on each instance — scale read-heavy config instances independently from schema management.
 
 ## Configuration
 
-The service is configured via environment variables:
+### Server
 
 | Variable | Description | Default |
 |----------|------------|---------|
@@ -114,18 +144,47 @@ The service is configured via environment variables:
 | `DB_READ_URL` | PostgreSQL read replica connection string | `DB_WRITE_URL` |
 | `REDIS_URL` | Redis connection string | required |
 | `ENABLE_SERVICES` | Services to enable: `schema`, `config`, `audit` | all |
-| `JWT_JWKS_URL` | JWKS endpoint for JWT validation | required |
-| `JWT_ISSUER` | Expected JWT issuer | optional |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | `info` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector endpoint | optional |
+
+### Authentication
+
+JWT is **opt-in**. By default, the service uses metadata-based auth:
+
+| Variable | Description | Default |
+|----------|------------|---------|
+| `JWT_JWKS_URL` | JWKS endpoint — enables JWT validation | disabled |
+| `JWT_ISSUER` | Expected JWT issuer | optional |
+
+Without JWT, pass identity via gRPC metadata headers:
+- `x-subject` (required) — actor identity
+- `x-role` — `superadmin` (default), `admin`, or `user`
+- `x-tenant-id` — required for non-superadmin roles
+
+### Observability (all opt-in)
+
+| Variable | Description |
+|----------|------------|
+| `OTEL_ENABLED` | Master switch — initializes SDK + slog trace correlation |
+| `OTEL_TRACES_GRPC` | gRPC server spans |
+| `OTEL_TRACES_DB` | PostgreSQL query spans |
+| `OTEL_TRACES_REDIS` | Redis command spans |
+| `OTEL_METRICS_GRPC` | gRPC request count/latency |
+| `OTEL_METRICS_DB_POOL` | Connection pool gauges |
+| `OTEL_METRICS_CACHE` | Cache hit/miss counters |
+| `OTEL_METRICS_CONFIG` | Config write counter + version gauge |
+| `OTEL_METRICS_SCHEMA` | Schema publish counter |
+
+Standard OTel variables (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) are respected by the SDK.
 
 ## API
 
 The API is defined in Protocol Buffers under [`proto/`](proto/). Three gRPC services:
 
 - **SchemaService** — create, version, and manage config schemas and tenants
-- **ConfigService** — read/write config values, subscribe to changes, version management
+- **ConfigService** — read/write typed config values, subscribe to changes, version management
 - **AuditService** — query change history and usage statistics
+
+Values use a `TypedValue` oneof — integer, number, string, bool, timestamp, duration, url, json — with null support.
 
 ## Contributing
 
