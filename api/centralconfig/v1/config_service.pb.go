@@ -373,7 +373,8 @@ type SetFieldRequest struct {
 	// Dot-separated field path (e.g. "payments.fee").
 	FieldPath string `protobuf:"bytes,2,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
 	// The new value, encoded as a string. See FieldType for encoding conventions.
-	Value string `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	// Omit (nil) to set the field to null. Empty string is a valid value.
+	Value *string `protobuf:"bytes,3,opt,name=value,proto3,oneof" json:"value,omitempty"`
 	// Optimistic concurrency control: the checksum from a previous GetField/GetConfig
 	// response. If provided and the field's current checksum doesn't match, the
 	// request fails with ABORTED. This prevents lost updates when multiple actors
@@ -433,8 +434,8 @@ func (x *SetFieldRequest) GetFieldPath() string {
 }
 
 func (x *SetFieldRequest) GetValue() string {
-	if x != nil {
-		return x.Value
+	if x != nil && x.Value != nil {
+		return *x.Value
 	}
 	return ""
 }
@@ -621,7 +622,8 @@ type FieldUpdate struct {
 	// Dot-separated field path.
 	FieldPath string `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
 	// The new value, encoded as a string.
-	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// Omit (nil) to set the field to null. Empty string is a valid value.
+	Value *string `protobuf:"bytes,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
 	// Optimistic concurrency control checksum for this specific field.
 	// See SetFieldRequest.expected_checksum for details.
 	ExpectedChecksum *string `protobuf:"bytes,3,opt,name=expected_checksum,json=expectedChecksum,proto3,oneof" json:"expected_checksum,omitempty"`
@@ -669,8 +671,8 @@ func (x *FieldUpdate) GetFieldPath() string {
 }
 
 func (x *FieldUpdate) GetValue() string {
-	if x != nil {
-		return x.Value
+	if x != nil && x.Value != nil {
+		return *x.Value
 	}
 	return ""
 }
@@ -1354,15 +1356,16 @@ const file_centralconfig_v1_config_service_proto_rawDesc = "" +
 	"\n" +
 	"\b_version\"J\n" +
 	"\x11GetFieldsResponse\x125\n" +
-	"\x06values\x18\x01 \x03(\v2\x1d.centralconfig.v1.ConfigValueR\x06values\"\xaa\x02\n" +
+	"\x06values\x18\x01 \x03(\v2\x1d.centralconfig.v1.ConfigValueR\x06values\"\xb9\x02\n" +
 	"\x0fSetFieldRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
-	"field_path\x18\x02 \x01(\tR\tfieldPath\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\tR\x05value\x120\n" +
-	"\x11expected_checksum\x18\x04 \x01(\tH\x00R\x10expectedChecksum\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\x05 \x01(\tH\x01R\vdescription\x88\x01\x01\x120\n" +
-	"\x11value_description\x18\x06 \x01(\tH\x02R\x10valueDescription\x88\x01\x01B\x14\n" +
+	"field_path\x18\x02 \x01(\tR\tfieldPath\x12\x19\n" +
+	"\x05value\x18\x03 \x01(\tH\x00R\x05value\x88\x01\x01\x120\n" +
+	"\x11expected_checksum\x18\x04 \x01(\tH\x01R\x10expectedChecksum\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x05 \x01(\tH\x02R\vdescription\x88\x01\x01\x120\n" +
+	"\x11value_description\x18\x06 \x01(\tH\x03R\x10valueDescription\x88\x01\x01B\b\n" +
+	"\x06_valueB\x14\n" +
 	"\x12_expected_checksumB\x0e\n" +
 	"\f_descriptionB\x14\n" +
 	"\x12_value_description\"Z\n" +
@@ -1374,13 +1377,14 @@ const file_centralconfig_v1_config_service_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01B\x0e\n" +
 	"\f_description\"[\n" +
 	"\x11SetFieldsResponse\x12F\n" +
-	"\x0econfig_version\x18\x01 \x01(\v2\x1f.centralconfig.v1.ConfigVersionR\rconfigVersion\"\xd2\x01\n" +
+	"\x0econfig_version\x18\x01 \x01(\v2\x1f.centralconfig.v1.ConfigVersionR\rconfigVersion\"\xe1\x01\n" +
 	"\vFieldUpdate\x12\x1d\n" +
 	"\n" +
-	"field_path\x18\x01 \x01(\tR\tfieldPath\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\x120\n" +
-	"\x11expected_checksum\x18\x03 \x01(\tH\x00R\x10expectedChecksum\x88\x01\x01\x120\n" +
-	"\x11value_description\x18\x04 \x01(\tH\x01R\x10valueDescription\x88\x01\x01B\x14\n" +
+	"field_path\x18\x01 \x01(\tR\tfieldPath\x12\x19\n" +
+	"\x05value\x18\x02 \x01(\tH\x00R\x05value\x88\x01\x01\x120\n" +
+	"\x11expected_checksum\x18\x03 \x01(\tH\x01R\x10expectedChecksum\x88\x01\x01\x120\n" +
+	"\x11value_description\x18\x04 \x01(\tH\x02R\x10valueDescription\x88\x01\x01B\b\n" +
+	"\x06_valueB\x14\n" +
 	"\x12_expected_checksumB\x14\n" +
 	"\x12_value_description\"n\n" +
 	"\x13ListVersionsRequest\x12\x1b\n" +

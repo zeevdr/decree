@@ -1,6 +1,8 @@
 module github.com/zeevdr/central-config-service/sdk/configwatcher
 
-go 1.25.0
+go 1.24
+
+toolchain go1.24.11
 
 require (
 	github.com/stretchr/testify v1.11.1

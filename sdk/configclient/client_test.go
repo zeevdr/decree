@@ -14,6 +14,8 @@ import (
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
 )
 
+func sp(s string) *string { return &s }
+
 // --- Mock ---
 
 type mockRPC struct {
@@ -85,7 +87,7 @@ func TestGet_Success(t *testing.T) {
 	rpc.On("GetField", mock.Anything, mock.MatchedBy(func(r *pb.GetFieldRequest) bool {
 		return r.TenantId == "t1" && r.FieldPath == "payments.fee"
 	})).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "payments.fee", Value: "0.5%", Checksum: "abc"},
+		Value: &pb.ConfigValue{FieldPath: "payments.fee", Value: sp("0.5%"), Checksum: "abc"},
 	}, nil)
 
 	val, err := client.Get(ctx, "t1", "payments.fee")
@@ -117,8 +119,8 @@ func TestGetAll_Success(t *testing.T) {
 			TenantId: "t1",
 			Version:  3,
 			Values: []*pb.ConfigValue{
-				{FieldPath: "a", Value: "1"},
-				{FieldPath: "b", Value: "2"},
+				{FieldPath: "a", Value: sp("1")},
+				{FieldPath: "b", Value: sp("2")},
 			},
 		},
 	}, nil)
@@ -136,7 +138,7 @@ func TestSet_Success(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
-		return r.TenantId == "t1" && r.FieldPath == "a" && r.Value == "new"
+		return r.TenantId == "t1" && r.FieldPath == "a" && r.Value != nil && *r.Value == "new"
 	})).Return(&pb.SetFieldResponse{}, nil)
 
 	err := client.Set(ctx, "t1", "a", "new")
@@ -192,7 +194,7 @@ func TestSnapshot_PinnedVersion(t *testing.T) {
 	rpc.On("GetField", mock.Anything, mock.MatchedBy(func(r *pb.GetFieldRequest) bool {
 		return r.Version != nil && *r.Version == v
 	})).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "a", Value: "val"},
+		Value: &pb.ConfigValue{FieldPath: "a", Value: sp("val")},
 	}, nil)
 
 	val, err := snap.Get(ctx, "a")
@@ -213,7 +215,7 @@ func TestAtVersion(t *testing.T) {
 		return r.Version != nil && *r.Version == v
 	})).Return(&pb.GetConfigResponse{
 		Config: &pb.Config{TenantId: "t1", Version: 3, Values: []*pb.ConfigValue{
-			{FieldPath: "x", Value: "y"},
+			{FieldPath: "x", Value: sp("y")},
 		}},
 	}, nil)
 
@@ -230,7 +232,7 @@ func TestGetForUpdate_ThenSet(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "a", Value: "old", Checksum: "chk123"},
+		Value: &pb.ConfigValue{FieldPath: "a", Value: sp("old"), Checksum: "chk123"},
 	}, nil)
 
 	lv, err := client.GetForUpdate(ctx, "t1", "a")
@@ -240,7 +242,7 @@ func TestGetForUpdate_ThenSet(t *testing.T) {
 
 	// Write with checksum
 	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
-		return r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk123" && r.Value == "new"
+		return r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk123" && r.Value != nil && *r.Value == "new"
 	})).Return(&pb.SetFieldResponse{}, nil)
 
 	err = lv.Set(ctx, client, "new")
@@ -253,7 +255,7 @@ func TestGetForUpdate_ChecksumMismatch(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "a", Value: "old", Checksum: "stale"},
+		Value: &pb.ConfigValue{FieldPath: "a", Value: sp("old"), Checksum: "stale"},
 	}, nil)
 
 	lv, err := client.GetForUpdate(ctx, "t1", "a")
@@ -274,11 +276,11 @@ func TestUpdate_Success(t *testing.T) {
 	ctx := context.Background()
 
 	rpc.On("GetField", mock.Anything, mock.Anything).Return(&pb.GetFieldResponse{
-		Value: &pb.ConfigValue{FieldPath: "counter", Value: "5", Checksum: "chk"},
+		Value: &pb.ConfigValue{FieldPath: "counter", Value: sp("5"), Checksum: "chk"},
 	}, nil)
 
 	rpc.On("SetField", mock.Anything, mock.MatchedBy(func(r *pb.SetFieldRequest) bool {
-		return r.Value == "6" && r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk"
+		return r.Value != nil && *r.Value == "6" && r.ExpectedChecksum != nil && *r.ExpectedChecksum == "chk"
 	})).Return(&pb.SetFieldResponse{}, nil)
 
 	err := client.Update(ctx, "t1", "counter", func(current string) (string, error) {

@@ -81,7 +81,7 @@ CREATE TABLE config_versions (
 CREATE TABLE config_values (
     config_version_id UUID NOT NULL REFERENCES config_versions(id) ON DELETE CASCADE,
     field_path        TEXT NOT NULL,
-    value             TEXT NOT NULL,
+    value             TEXT,
     description       TEXT,
     PRIMARY KEY (config_version_id, field_path)
 );

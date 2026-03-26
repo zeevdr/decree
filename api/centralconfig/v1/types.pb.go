@@ -605,7 +605,8 @@ type ConfigValue struct {
 	FieldPath string `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
 	// The value, encoded as a string regardless of field type.
 	// See FieldType for encoding conventions per type.
-	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// Absent (nil) when the field value is null.
+	Value *string `protobuf:"bytes,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
 	// SHA-256 checksum of the value. Used for optimistic concurrency control
 	// in SetField/SetFields via expected_checksum.
 	Checksum string `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
@@ -654,8 +655,8 @@ func (x *ConfigValue) GetFieldPath() string {
 }
 
 func (x *ConfigValue) GetValue() string {
-	if x != nil {
-		return x.Value
+	if x != nil && x.Value != nil {
+		return *x.Value
 	}
 	return ""
 }
@@ -842,10 +843,10 @@ type ConfigChange struct {
 	Version int32 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
 	// The field that was changed.
 	FieldPath string `protobuf:"bytes,3,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	// The previous value (empty string if field was newly created).
-	OldValue string `protobuf:"bytes,4,opt,name=old_value,json=oldValue,proto3" json:"old_value,omitempty"`
-	// The new value.
-	NewValue string `protobuf:"bytes,5,opt,name=new_value,json=newValue,proto3" json:"new_value,omitempty"`
+	// The previous value. Absent (nil) if field was newly created or was null.
+	OldValue *string `protobuf:"bytes,4,opt,name=old_value,json=oldValue,proto3,oneof" json:"old_value,omitempty"`
+	// The new value. Absent (nil) if field was set to null.
+	NewValue *string `protobuf:"bytes,5,opt,name=new_value,json=newValue,proto3,oneof" json:"new_value,omitempty"`
 	// The actor who made the change.
 	ChangedBy string `protobuf:"bytes,6,opt,name=changed_by,json=changedBy,proto3" json:"changed_by,omitempty"`
 	// When the change occurred.
@@ -906,15 +907,15 @@ func (x *ConfigChange) GetFieldPath() string {
 }
 
 func (x *ConfigChange) GetOldValue() string {
-	if x != nil {
-		return x.OldValue
+	if x != nil && x.OldValue != nil {
+		return *x.OldValue
 	}
 	return ""
 }
 
 func (x *ConfigChange) GetNewValue() string {
-	if x != nil {
-		return x.NewValue
+	if x != nil && x.NewValue != nil {
+		return *x.NewValue
 	}
 	return ""
 }
@@ -1195,13 +1196,14 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"field_path\x18\x02 \x01(\tR\tfieldPath\x12#\n" +
-	"\rlocked_values\x18\x03 \x03(\tR\flockedValues\"\x95\x01\n" +
+	"\rlocked_values\x18\x03 \x03(\tR\flockedValues\"\xa4\x01\n" +
 	"\vConfigValue\x12\x1d\n" +
 	"\n" +
-	"field_path\x18\x01 \x01(\tR\tfieldPath\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\x12\x1a\n" +
+	"field_path\x18\x01 \x01(\tR\tfieldPath\x12\x19\n" +
+	"\x05value\x18\x02 \x01(\tH\x00R\x05value\x88\x01\x01\x12\x1a\n" +
 	"\bchecksum\x18\x03 \x01(\tR\bchecksum\x12%\n" +
-	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01B\x0e\n" +
+	"\vdescription\x18\x04 \x01(\tH\x01R\vdescription\x88\x01\x01B\b\n" +
+	"\x06_valueB\x0e\n" +
 	"\f_description\"\xd2\x01\n" +
 	"\rConfigVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -1215,18 +1217,22 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\x06Config\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x125\n" +
-	"\x06values\x18\x03 \x03(\v2\x1d.centralconfig.v1.ConfigValueR\x06values\"\xf8\x01\n" +
+	"\x06values\x18\x03 \x03(\v2\x1d.centralconfig.v1.ConfigValueR\x06values\"\x9e\x02\n" +
 	"\fConfigChange\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x12\x1d\n" +
 	"\n" +
-	"field_path\x18\x03 \x01(\tR\tfieldPath\x12\x1b\n" +
-	"\told_value\x18\x04 \x01(\tR\boldValue\x12\x1b\n" +
-	"\tnew_value\x18\x05 \x01(\tR\bnewValue\x12\x1d\n" +
+	"field_path\x18\x03 \x01(\tR\tfieldPath\x12 \n" +
+	"\told_value\x18\x04 \x01(\tH\x00R\boldValue\x88\x01\x01\x12 \n" +
+	"\tnew_value\x18\x05 \x01(\tH\x01R\bnewValue\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"changed_by\x18\x06 \x01(\tR\tchangedBy\x129\n" +
 	"\n" +
-	"changed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\"\xf4\x02\n" +
+	"changed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAtB\f\n" +
+	"\n" +
+	"_old_valueB\f\n" +
+	"\n" +
+	"_new_value\"\xf4\x02\n" +
 	"\n" +
 	"AuditEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -1329,6 +1335,7 @@ func file_centralconfig_v1_types_proto_init() {
 	file_centralconfig_v1_types_proto_msgTypes[1].OneofWrappers = []any{}
 	file_centralconfig_v1_types_proto_msgTypes[2].OneofWrappers = []any{}
 	file_centralconfig_v1_types_proto_msgTypes[5].OneofWrappers = []any{}
+	file_centralconfig_v1_types_proto_msgTypes[8].OneofWrappers = []any{}
 	file_centralconfig_v1_types_proto_msgTypes[9].OneofWrappers = []any{}
 	file_centralconfig_v1_types_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}

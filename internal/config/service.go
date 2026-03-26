@@ -69,9 +69,10 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 			s.cacheMetrics.Hit(ctx)
 			values := make([]*pb.ConfigValue, 0, len(cached))
 			for path, val := range cached {
+				v := val
 				values = append(values, &pb.ConfigValue{
 					FieldPath: path,
-					Value:     val,
+					Value:     &v,
 					Checksum:  computeChecksum(val),
 				})
 			}
@@ -97,13 +98,13 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
 			Value:     row.Value,
-			Checksum:  computeChecksum(row.Value),
+			Checksum:  computeChecksum(derefString(row.Value)),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
 			cv.Description = row.Description
 		}
 		values = append(values, cv)
-		cacheMap[row.FieldPath] = row.Value
+		cacheMap[row.FieldPath] = derefString(row.Value)
 	}
 
 	// Populate cache (values only, no descriptions).
@@ -144,7 +145,7 @@ func (s *Service) GetField(ctx context.Context, req *pb.GetFieldRequest) (*pb.Ge
 	cv := &pb.ConfigValue{
 		FieldPath: row.FieldPath,
 		Value:     row.Value,
-		Checksum:  computeChecksum(row.Value),
+		Checksum:  computeChecksum(derefString(row.Value)),
 	}
 	if req.IncludeDescription && row.Description != nil {
 		cv.Description = row.Description
@@ -180,7 +181,7 @@ func (s *Service) GetFields(ctx context.Context, req *pb.GetFieldsRequest) (*pb.
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
 			Value:     row.Value,
-			Checksum:  computeChecksum(row.Value),
+			Checksum:  computeChecksum(derefString(row.Value)),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
 			cv.Description = row.Description
@@ -246,7 +247,7 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 			Action:        "set_field",
 			FieldPath:     ptrString(req.FieldPath),
 			OldValue:      ptrString(oldValue),
-			NewValue:      ptrString(req.Value),
+			NewValue:      req.Value,
 			ConfigVersion: &newVersion.Version,
 		})
 	}); err != nil {
@@ -258,7 +259,7 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 	if err := s.cache.Invalidate(ctx, req.TenantId); err != nil {
 		s.logger.WarnContext(ctx, "failed to invalidate cache", "error", err)
 	}
-	s.publishChange(ctx, req.TenantId, newVersion.Version, req.FieldPath, oldValue, req.Value, actor)
+	s.publishChange(ctx, req.TenantId, newVersion.Version, req.FieldPath, oldValue, derefString(req.Value), actor)
 
 	s.metrics.RecordWrite(ctx, req.TenantId, "set_field")
 	s.metrics.RecordVersion(ctx, req.TenantId, int64(newVersion.Version))
@@ -302,7 +303,7 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 		changes = append(changes, changeRecord{
 			fieldPath: update.FieldPath,
 			oldValue:  s.getCurrentValue(ctx, tenantID, update.FieldPath, latestVersion),
-			newValue:  update.Value,
+			newValue:  derefString(update.Value),
 		})
 	}
 
@@ -336,7 +337,7 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 				Action:        "set_field",
 				FieldPath:     ptrString(update.FieldPath),
 				OldValue:      ptrString(changes[i].oldValue),
-				NewValue:      ptrString(update.Value),
+				NewValue:      update.Value,
 				ConfigVersion: &newVersion.Version,
 			}); txErr != nil {
 				return fmt.Errorf("insert audit log for %s: %w", update.FieldPath, txErr)
@@ -531,8 +532,8 @@ func (s *Service) Subscribe(req *pb.SubscribeRequest, stream grpc.ServerStreamin
 					TenantId:  event.TenantID,
 					Version:   event.Version,
 					FieldPath: event.FieldPath,
-					OldValue:  event.OldValue,
-					NewValue:  event.NewValue,
+					OldValue:  ptrString(event.OldValue),
+					NewValue:  strPtr(event.NewValue),
 					ChangedBy: event.ChangedBy,
 					ChangedAt: timestamppb.New(event.ChangedAt),
 				},
@@ -579,7 +580,7 @@ func (s *Service) ExportConfig(ctx context.Context, req *pb.ExportConfigRequest)
 
 	rows := make([]configRow, len(dbRows))
 	for i, r := range dbRows {
-		rows[i] = configRow{FieldPath: r.FieldPath, Value: r.Value, Description: r.Description}
+		rows[i] = configRow{FieldPath: r.FieldPath, Value: derefString(r.Value), Description: r.Description}
 	}
 
 	// Get version description.
@@ -684,7 +685,7 @@ func (s *Service) ImportConfig(ctx context.Context, req *pb.ImportConfigRequest)
 			if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
 				ConfigVersionID: newVersion.ID,
 				FieldPath:       v.FieldPath,
-				Value:           v.Value,
+				Value:           strPtr(v.Value),
 				Description:     v.Description,
 			}); txErr != nil {
 				return fmt.Errorf("set config value %s: %w", v.FieldPath, txErr)
@@ -696,7 +697,7 @@ func (s *Service) ImportConfig(ctx context.Context, req *pb.ImportConfigRequest)
 				Action:        "import",
 				FieldPath:     ptrString(v.FieldPath),
 				OldValue:      ptrString(changes[i].oldValue),
-				NewValue:      ptrString(v.Value),
+				NewValue:      strPtr(v.Value),
 				ConfigVersion: &newVersion.Version,
 			}); txErr != nil {
 				return fmt.Errorf("insert audit log for %s: %w", v.FieldPath, txErr)
@@ -797,7 +798,7 @@ func (s *Service) getCurrentValue(ctx context.Context, tenantID pgtype.UUID, fie
 	if err != nil {
 		return ""
 	}
-	return row.Value
+	return derefString(row.Value)
 }
 
 func (s *Service) checkChecksum(ctx context.Context, tenantID pgtype.UUID, fieldPath, expected string) error {
@@ -819,7 +820,7 @@ func (s *Service) checkChecksum(ctx context.Context, tenantID pgtype.UUID, field
 		}
 		return status.Error(codes.Internal, "failed to get current value for checksum")
 	}
-	actual := computeChecksum(row.Value)
+	actual := computeChecksum(derefString(row.Value))
 	if actual != expected {
 		return status.Errorf(codes.Aborted, "checksum mismatch for %s: expected %s, got %s", fieldPath, expected, actual)
 	}

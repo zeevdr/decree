@@ -57,6 +57,19 @@ func ptrString(s string) *string {
 	return &s
 }
 
+// strPtr returns a pointer to s (always non-nil, even for empty string).
+func strPtr(s string) *string {
+	return &s
+}
+
+// derefString safely dereferences a *string, returning "" for nil.
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 // dbFieldTypeToProto converts a DB field type to proto enum.
 func dbFieldTypeToProto(t dbstore.FieldType) pb.FieldType {
 	switch t {

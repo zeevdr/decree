@@ -62,7 +62,7 @@ type GetConfigValueAtVersionParams struct {
 
 type GetConfigValueAtVersionRow struct {
 	FieldPath   string  `json:"field_path"`
-	Value       string  `json:"value"`
+	Value       *string `json:"value"`
 	Description *string `json:"description"`
 }
 
@@ -144,7 +144,7 @@ type GetFullConfigAtVersionParams struct {
 
 type GetFullConfigAtVersionRow struct {
 	FieldPath   string  `json:"field_path"`
-	Value       string  `json:"value"`
+	Value       *string `json:"value"`
 	Description *string `json:"description"`
 }
 
@@ -237,7 +237,7 @@ VALUES ($1, $2, $3, $4)
 type SetConfigValueParams struct {
 	ConfigVersionID pgtype.UUID `json:"config_version_id"`
 	FieldPath       string      `json:"field_path"`
-	Value           string      `json:"value"`
+	Value           *string     `json:"value"`
 	Description     *string     `json:"description"`
 }
 

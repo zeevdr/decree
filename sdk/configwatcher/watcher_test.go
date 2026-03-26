@@ -15,6 +15,8 @@ import (
 	"github.com/zeevdr/central-config-service/sdk/configclient"
 )
 
+func sp(s string) *string { return &s }
+
 // --- Value unit tests ---
 
 func TestValue_Get_Default(t *testing.T) {
@@ -191,8 +193,8 @@ func TestWatcher_SnapshotAndStream(t *testing.T) {
 	// Mock snapshot (GetConfig for configclient.GetAll).
 	rpc.On("GetConfig", mock.Anything, mock.Anything).Return(&pb.GetConfigResponse{
 		Config: &pb.Config{TenantId: "t1", Version: 1, Values: []*pb.ConfigValue{
-			{FieldPath: "payments.fee", Value: "0.025"},
-			{FieldPath: "payments.enabled", Value: "true"},
+			{FieldPath: "payments.fee", Value: sp("0.025")},
+			{FieldPath: "payments.enabled", Value: sp("true")},
 		}},
 	}, nil)
 
@@ -212,8 +214,8 @@ func TestWatcher_SnapshotAndStream(t *testing.T) {
 	stream.send(&pb.ConfigChange{
 		TenantId:  "t1",
 		FieldPath: "payments.fee",
-		OldValue:  "0.025",
-		NewValue:  "0.05",
+		OldValue:  sp("0.025"),
+		NewValue:  sp("0.05"),
 	})
 
 	// Wait for change to propagate.

@@ -329,7 +329,11 @@ func (w *Watcher) subscribe(ctx context.Context, fieldPaths []string) error {
 
 		w.mu.RLock()
 		if entry, ok := w.fields[change.FieldPath]; ok {
-			entry.rawUpdate(change.NewValue, true)
+			if change.NewValue != nil {
+				entry.rawUpdate(*change.NewValue, true)
+			} else {
+				entry.rawUpdate("", false)
+			}
 		}
 		w.mu.RUnlock()
 	}

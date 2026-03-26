@@ -56,7 +56,7 @@ func TestGetConfig_CacheHit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, resp.Config.Values, 1)
 	assert.Equal(t, "payments.fee", resp.Config.Values[0].FieldPath)
-	assert.Equal(t, "0.5", resp.Config.Values[0].Value)
+	assert.Equal(t, "0.5", derefString(resp.Config.Values[0].Value))
 	// Should not hit DB.
 	store.AssertNotCalled(t, "GetFullConfigAtVersion")
 	cache.AssertExpectations(t)
@@ -75,7 +75,7 @@ func TestGetConfig_CacheMiss(t *testing.T) {
 		Return(nil, nil)
 	store.On("GetFullConfigAtVersion", ctx, dbstore.GetFullConfigAtVersionParams{TenantID: tenantID, Version: 3}).
 		Return([]dbstore.GetFullConfigAtVersionRow{
-			{FieldPath: "a.b", Value: "123"},
+			{FieldPath: "a.b", Value: strPtr("123")},
 		}, nil)
 	cache.On("Set", ctx, tenantIDStr, int32(3), mock.AnythingOfType("map[string]string"), mock.Anything).
 		Return(nil)
@@ -99,7 +99,7 @@ func TestGetConfig_IncludeDescriptions_BypassesCache(t *testing.T) {
 		Return(dbstore.ConfigVersion{Version: 1}, nil)
 	store.On("GetFullConfigAtVersion", ctx, dbstore.GetFullConfigAtVersionParams{TenantID: tenantID, Version: 1}).
 		Return([]dbstore.GetFullConfigAtVersionRow{
-			{FieldPath: "fee", Value: "0.5", Description: &desc},
+			{FieldPath: "fee", Value: strPtr("0.5"), Description: &desc},
 		}, nil)
 
 	resp, err := svc.GetConfig(ctx, &pb.GetConfigRequest{
@@ -139,7 +139,7 @@ func TestSetField_Success(t *testing.T) {
 	resp, err := svc.SetField(ctx, &pb.SetFieldRequest{
 		TenantId:  tenantIDStr,
 		FieldPath: "payments.fee",
-		Value:     "0.5",
+		Value:     strPtr("0.5"),
 	})
 
 	require.NoError(t, err)
@@ -159,12 +159,12 @@ func TestSetField_ChecksumMismatch(t *testing.T) {
 	store.On("GetLatestConfigVersion", ctx, tenantID).
 		Return(dbstore.ConfigVersion{Version: 1}, nil)
 	store.On("GetConfigValueAtVersion", ctx, mock.AnythingOfType("dbstore.GetConfigValueAtVersionParams")).
-		Return(dbstore.GetConfigValueAtVersionRow{Value: "old-value"}, nil)
+		Return(dbstore.GetConfigValueAtVersionRow{Value: strPtr("old-value")}, nil)
 
 	_, err := svc.SetField(ctx, &pb.SetFieldRequest{
 		TenantId:         tenantIDStr,
 		FieldPath:        "payments.fee",
-		Value:            "0.5",
+		Value:            strPtr("0.5"),
 		ExpectedChecksum: &wrongChecksum,
 	})
 
@@ -191,7 +191,7 @@ func TestSetField_LockedField(t *testing.T) {
 	_, err := svc.SetField(ctx, &pb.SetFieldRequest{
 		TenantId:  tenantIDStr,
 		FieldPath: "payments.fee",
-		Value:     "0.5",
+		Value:     strPtr("0.5"),
 	})
 
 	require.Error(t, err)
@@ -233,8 +233,8 @@ func TestRollbackToVersion_Success(t *testing.T) {
 
 	store.On("GetFullConfigAtVersion", ctx, dbstore.GetFullConfigAtVersionParams{TenantID: tenantID, Version: 2}).
 		Return([]dbstore.GetFullConfigAtVersionRow{
-			{FieldPath: "a", Value: "1"},
-			{FieldPath: "b", Value: "2"},
+			{FieldPath: "a", Value: strPtr("1")},
+			{FieldPath: "b", Value: strPtr("2")},
 		}, nil)
 	store.On("GetLatestConfigVersion", ctx, tenantID).
 		Return(dbstore.ConfigVersion{Version: 5}, nil)
@@ -280,8 +280,8 @@ func TestExportConfig_Success(t *testing.T) {
 		}, nil)
 	store.On("GetFullConfigAtVersion", ctx, dbstore.GetFullConfigAtVersionParams{TenantID: tenantID, Version: 3}).
 		Return([]dbstore.GetFullConfigAtVersionRow{
-			{FieldPath: "payments.fee", Value: "0.025"},
-			{FieldPath: "payments.enabled", Value: "true"},
+			{FieldPath: "payments.fee", Value: strPtr("0.025")},
+			{FieldPath: "payments.enabled", Value: strPtr("true")},
 		}, nil)
 	desc := "version 3"
 	store.On("GetConfigVersion", ctx, dbstore.GetConfigVersionParams{TenantID: tenantID, Version: 3}).
@@ -337,7 +337,7 @@ values:
 	store.On("GetLatestConfigVersion", ctx, tenantID).
 		Return(dbstore.ConfigVersion{Version: 2}, nil)
 	store.On("GetConfigValueAtVersion", ctx, mock.AnythingOfType("dbstore.GetConfigValueAtVersionParams")).
-		Return(dbstore.GetConfigValueAtVersionRow{Value: ""}, pgx.ErrNoRows)
+		Return(dbstore.GetConfigValueAtVersionRow{}, pgx.ErrNoRows)
 	store.On("CreateConfigVersion", ctx, mock.AnythingOfType("dbstore.CreateConfigVersionParams")).
 		Return(dbstore.ConfigVersion{ID: newVersionID, TenantID: tenantID, Version: 3, CreatedBy: "unknown"}, nil)
 	store.On("SetConfigValue", ctx, mock.AnythingOfType("dbstore.SetConfigValueParams")).

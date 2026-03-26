@@ -55,7 +55,7 @@ func (s *Snapshot) Get(ctx context.Context, fieldPath string) (string, error) {
 	if err != nil {
 		return "", mapError(err)
 	}
-	return resp.Value.Value, nil
+	return derefString(resp.Value.Value), nil
 }
 
 // GetAll returns all configuration values at the pinned version.
@@ -83,7 +83,7 @@ func (s *Snapshot) GetFields(ctx context.Context, fieldPaths []string) (map[stri
 	}
 	result := make(map[string]string, len(resp.Values))
 	for _, v := range resp.Values {
-		result[v.FieldPath] = v.Value
+		result[v.FieldPath] = derefString(v.Value)
 	}
 	return result, nil
 }

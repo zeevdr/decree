@@ -13,7 +13,19 @@ func (c *Client) Set(ctx context.Context, tenantID, fieldPath, value string) err
 	_, err := c.rpc.SetField(c.withAuth(ctx), &pb.SetFieldRequest{
 		TenantId:  tenantID,
 		FieldPath: fieldPath,
-		Value:     value,
+		Value:     &value,
+	})
+	return mapError(err)
+}
+
+// SetNull sets a configuration field to null.
+// Creates a new config version atomically.
+// Returns [ErrLocked] if the field is locked.
+func (c *Client) SetNull(ctx context.Context, tenantID, fieldPath string) error {
+	_, err := c.rpc.SetField(c.withAuth(ctx), &pb.SetFieldRequest{
+		TenantId:  tenantID,
+		FieldPath: fieldPath,
+		// Value is nil — sets the field to null.
 	})
 	return mapError(err)
 }
@@ -24,9 +36,10 @@ func (c *Client) Set(ctx context.Context, tenantID, fieldPath, value string) err
 func (c *Client) SetMany(ctx context.Context, tenantID string, values map[string]string, description string) error {
 	updates := make([]*pb.FieldUpdate, 0, len(values))
 	for path, val := range values {
+		v := val
 		updates = append(updates, &pb.FieldUpdate{
 			FieldPath: path,
-			Value:     val,
+			Value:     &v,
 		})
 	}
 	req := &pb.SetFieldsRequest{
@@ -72,7 +85,7 @@ func (c *Client) GetForUpdate(ctx context.Context, tenantID, fieldPath string) (
 	}
 	return &LockedValue{
 		FieldPath: fieldPath,
-		Value:     resp.Value.Value,
+		Value:     derefString(resp.Value.Value),
 		Checksum:  resp.Value.Checksum,
 		tenantID:  tenantID,
 	}, nil
@@ -85,7 +98,7 @@ func (lv *LockedValue) Set(ctx context.Context, client *Client, newValue string)
 	_, err := client.rpc.SetField(client.withAuth(ctx), &pb.SetFieldRequest{
 		TenantId:         lv.tenantID,
 		FieldPath:        lv.FieldPath,
-		Value:            newValue,
+		Value:            &newValue,
 		ExpectedChecksum: &lv.Checksum,
 	})
 	return mapError(err)

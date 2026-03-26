@@ -170,7 +170,8 @@ message ConfigValue {
 
   // The value, encoded as a string regardless of field type.
   // See FieldType for encoding conventions per type.
-  string value = 2;
+  // Absent (nil) when the field value is null.
+  optional string value = 2;
 
   // SHA-256 checksum of the value. Used for optimistic concurrency control
   // in SetField/SetFields via expected_checksum.
@@ -229,11 +230,11 @@ message ConfigChange {
   // The field that was changed.
   string field_path = 3;
 
-  // The previous value (empty string if field was newly created).
-  string old_value = 4;
+  // The previous value. Absent (nil) if field was newly created or was null.
+  optional string old_value = 4;
 
-  // The new value.
-  string new_value = 5;
+  // The new value. Absent (nil) if field was set to null.
+  optional string new_value = 5;
 
   // The actor who made the change.
   string changed_by = 6;
