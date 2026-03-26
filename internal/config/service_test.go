@@ -17,6 +17,7 @@ import (
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
 	"github.com/zeevdr/central-config-service/internal/auth"
 	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
+	"github.com/zeevdr/central-config-service/internal/validation"
 )
 
 var testLogger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
@@ -35,6 +36,16 @@ func newTestService() (*Service, *mockStore, *mockCache, *mockPublisher) {
 	sub := &mockSubscriber{}
 	svc := NewService(store, cache, pub, sub, testLogger, nil, nil, nil)
 	return svc, store, cache, pub
+}
+
+func newTestServiceWithValidation() (*Service, *mockStore) {
+	store := &mockStore{}
+	cache := &mockCache{}
+	pub := &mockPublisher{}
+	sub := &mockSubscriber{}
+	vf := validation.NewValidatorFactory(store)
+	svc := NewService(store, cache, pub, sub, testLogger, nil, nil, vf)
+	return svc, store
 }
 
 // --- GetConfig ---
@@ -357,4 +368,88 @@ values:
 	store.AssertNumberOfCalls(t, "SetConfigValue", 2)
 	store.AssertNumberOfCalls(t, "InsertAuditWriteLog", 2)
 	cache.AssertCalled(t, "Invalidate", ctx, tenantIDStr)
+}
+
+// --- ImportConfig with validation ---
+
+func TestImportConfig_ValidationRejectsUnknownField(t *testing.T) {
+	svc, store := newTestServiceWithValidation()
+	ctx := context.Background()
+
+	tenantID := testUUID(1)
+	tenantIDStr := uuidToString(tenantID)
+	schemaID := testUUID(10)
+	schemaVersionID := testUUID(11)
+
+	yamlContent := []byte(`
+syntax: "v1"
+values:
+  unknown.field:
+    value: "hello"
+`)
+
+	store.On("GetTenantByID", ctx, tenantID).
+		Return(dbstore.Tenant{SchemaID: schemaID, SchemaVersion: 1}, nil)
+	store.On("GetSchemaVersion", ctx, dbstore.GetSchemaVersionParams{SchemaID: schemaID, Version: 1}).
+		Return(dbstore.SchemaVersion{ID: schemaVersionID}, nil)
+	store.On("GetSchemaFields", ctx, schemaVersionID).
+		Return([]dbstore.SchemaField{
+			{Path: "known.field", FieldType: dbstore.FieldTypeString},
+		}, nil)
+	store.On("GetFieldLocks", ctx, tenantID).
+		Return([]dbstore.TenantFieldLock{}, nil)
+
+	_, err := svc.ImportConfig(ctx, &pb.ImportConfigRequest{
+		TenantId:    tenantIDStr,
+		YamlContent: yamlContent,
+	})
+
+	require.Error(t, err)
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	assert.Contains(t, err.Error(), "not defined")
+}
+
+func TestImportConfig_ValidationRejectsConstraintViolation(t *testing.T) {
+	svc, store := newTestServiceWithValidation()
+	ctx := context.Background()
+
+	tenantID := testUUID(1)
+	tenantIDStr := uuidToString(tenantID)
+	schemaID := testUUID(10)
+	schemaVersionID := testUUID(11)
+
+	// Import an integer value that exceeds max constraint.
+	yamlContent := []byte(`
+syntax: "v1"
+values:
+  app.retries:
+    value: 99
+`)
+
+	minC := float64(0)
+	maxC := float64(10)
+	constraintsJSON := []byte(`{"min":0,"max":10}`)
+
+	store.On("GetTenantByID", ctx, tenantID).
+		Return(dbstore.Tenant{SchemaID: schemaID, SchemaVersion: 1}, nil)
+	store.On("GetSchemaVersion", ctx, dbstore.GetSchemaVersionParams{SchemaID: schemaID, Version: 1}).
+		Return(dbstore.SchemaVersion{ID: schemaVersionID}, nil)
+	store.On("GetSchemaFields", ctx, schemaVersionID).
+		Return([]dbstore.SchemaField{
+			{Path: "app.retries", FieldType: dbstore.FieldTypeInteger, Constraints: constraintsJSON},
+		}, nil)
+	store.On("GetFieldLocks", ctx, tenantID).
+		Return([]dbstore.TenantFieldLock{}, nil)
+
+	_ = minC
+	_ = maxC
+
+	_, err := svc.ImportConfig(ctx, &pb.ImportConfigRequest{
+		TenantId:    tenantIDStr,
+		YamlContent: yamlContent,
+	})
+
+	require.Error(t, err)
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	assert.Contains(t, err.Error(), "maximum")
 }

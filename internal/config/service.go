@@ -643,9 +643,15 @@ func (s *Service) ImportConfig(ctx context.Context, req *pb.ImportConfigRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "value conversion error: %v", err)
 	}
 
-	// Check field locks.
+	// Check field locks and validate.
 	for _, v := range values {
 		if err := s.checkFieldLock(ctx, tenantID, v.FieldPath); err != nil {
+			return nil, err
+		}
+		// Convert string value to TypedValue for validation.
+		ft := fieldTypes[v.FieldPath]
+		tv := stringToTypedValue(&v.Value, ft)
+		if err := s.validateField(ctx, tenantID, req.TenantId, v.FieldPath, tv); err != nil {
 			return nil, err
 		}
 	}

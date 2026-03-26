@@ -117,6 +117,44 @@ func TestConstraintValidation(t *testing.T) {
 		assert.Contains(t, err.Error(), "expected integer")
 	})
 
+	// --- Import validation ---
+
+	t.Run("import valid YAML accepted", func(t *testing.T) {
+		validYAML := []byte(`syntax: "v1"
+values:
+  app.retries:
+    value: 5
+  app.name:
+    value: "ValidApp"
+  app.env:
+    value: "dev"
+`)
+		_, err := admin.ImportConfig(ctx, tenant.ID, validYAML, "valid import")
+		require.NoError(t, err)
+	})
+
+	t.Run("import rejects constraint violation", func(t *testing.T) {
+		badYAML := []byte(`syntax: "v1"
+values:
+  app.retries:
+    value: 99
+`)
+		_, err := admin.ImportConfig(ctx, tenant.ID, badYAML, "bad import")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "maximum")
+	})
+
+	t.Run("import rejects unknown field", func(t *testing.T) {
+		badYAML := []byte(`syntax: "v1"
+values:
+  app.nonexistent:
+    value: "hello"
+`)
+		_, err := admin.ImportConfig(ctx, tenant.ID, badYAML, "unknown field import")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not defined")
+	})
+
 	// Cleanup.
 	_ = admin.DeleteTenant(ctx, tenant.ID)
 	_ = admin.DeleteSchema(ctx, s.ID)
