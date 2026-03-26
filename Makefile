@@ -4,7 +4,7 @@ TOOLS_IMAGE := central-config-tools
 TOOLS_SENTINEL := .tools-image-built
 DOCKER_RUN_TOOLS := docker run --rm -u $(shell id -u):$(shell id -g) -e HOME=/tmp -v $(CURDIR):/workspace -w /workspace $(TOOLS_IMAGE)
 
-.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e clean tools help
+.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e bench bench-e2e clean tools help
 
 all: generate lint test build
 
@@ -60,7 +60,17 @@ migrate-down: $(TOOLS_SENTINEL)
 ## e2e: Run end-to-end tests (docker compose → migrate → test → teardown)
 e2e:
 	docker compose up -d --wait service
-	go test ./e2e/... -tags=e2e -v -race -count=1 || (docker compose down -v && exit 1)
+	cd e2e && go test -tags=e2e -v -race -count=1 ./... || (cd .. && docker compose down -v && exit 1)
+	docker compose down -v
+
+## bench: Run unit benchmarks
+bench:
+	go test ./internal/... -bench=. -benchmem -count=3 -run=^$
+
+## bench-e2e: Run e2e benchmarks (docker compose → migrate → bench → teardown)
+bench-e2e:
+	docker compose up -d --wait service
+	cd e2e && go test -tags=e2e -bench=. -benchmem -count=3 -run=^$ -timeout=300s ./... || (cd .. && docker compose down -v && exit 1)
 	docker compose down -v
 
 ## clean: Remove build artifacts and generated code

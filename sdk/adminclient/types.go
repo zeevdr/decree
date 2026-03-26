@@ -23,6 +23,7 @@ type Schema struct {
 }
 
 // Field represents a single field definition within a schema.
+// Field represents a single field definition within a schema.
 type Field struct {
 	Path        string
 	Type        string
@@ -31,6 +32,16 @@ type Field struct {
 	RedirectTo  string
 	Default     string
 	Description string
+	Constraints *FieldConstraints
+}
+
+// FieldConstraints defines validation rules for a field.
+type FieldConstraints struct {
+	Min        *float64
+	Max        *float64
+	Pattern    string
+	Enum       []string
+	JSONSchema string
 }
 
 // Tenant represents a tenant assigned to a schema.
@@ -144,9 +155,30 @@ func fieldsToProto(fields []Field) []*pb.SchemaField {
 		}
 		// Type is set by name lookup — caller is responsible for valid type names.
 		pf.Type = pb.FieldType(pb.FieldType_value["FIELD_TYPE_"+f.Type])
+		if f.Constraints != nil {
+			pf.Constraints = constraintsToProto(f.Constraints)
+		}
 		result[i] = pf
 	}
 	return result
+}
+
+func constraintsToProto(c *FieldConstraints) *pb.FieldConstraints {
+	if c == nil {
+		return nil
+	}
+	pc := &pb.FieldConstraints{
+		Min:        c.Min,
+		Max:        c.Max,
+		EnumValues: c.Enum,
+	}
+	if c.Pattern != "" {
+		pc.Regex = &c.Pattern
+	}
+	if c.JSONSchema != "" {
+		pc.JsonSchema = &c.JSONSchema
+	}
+	return pc
 }
 
 func tenantFromProto(t *pb.Tenant) *Tenant {

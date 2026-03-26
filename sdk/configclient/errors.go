@@ -7,6 +7,7 @@ package configclient
 
 import (
 	"errors"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,6 +30,10 @@ var (
 	// ErrTypeMismatch is returned when a typed getter is called on a field
 	// whose value type doesn't match (e.g. GetInt on a string field).
 	ErrTypeMismatch = errors.New("value type mismatch")
+
+	// ErrInvalidArgument is returned when a value fails server-side validation
+	// (type mismatch, constraint violation, or unknown field in strict mode).
+	ErrInvalidArgument = errors.New("invalid argument")
 )
 
 // mapError converts gRPC status errors to sentinel errors.
@@ -49,6 +54,8 @@ func mapError(err error) error {
 		return ErrChecksumMismatch
 	case codes.AlreadyExists:
 		return ErrAlreadyExists
+	case codes.InvalidArgument:
+		return fmt.Errorf("%w: %s", ErrInvalidArgument, st.Message())
 	default:
 		return err
 	}

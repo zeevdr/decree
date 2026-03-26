@@ -1,4 +1,4 @@
-go 1.25.0
+go 1.24.0
 
 use (
 	.
@@ -6,4 +6,6 @@ use (
 	./sdk/configclient
 	./sdk/adminclient
 	./sdk/configwatcher
+	./cmd/ccs
+	./e2e
 )
