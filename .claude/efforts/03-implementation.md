@@ -62,10 +62,17 @@ Core infrastructure — everything needed before implementing business logic.
 ### Phase 5: Polish
 
 - [ ] Helm chart
-- [x] E2E tests — docker-compose stack (PG + Redis + migrate + service), 6 test suites: schema lifecycle, full flow (schema→tenant→config→lock→audit), streaming subscription, error cases, schema export/import, config export/import
-- [x] Lint cleanup — all golangci-lint issues fixed (errcheck, gofumpt, staticcheck, gocritic, unparam)
-- [x] Proto documentation — comprehensive field-level comments across all 4 proto files (slug formats, value encoding, import semantics, concurrency, caching, versioning, locks, pagination, cascades)
-- [x] OpenTelemetry integration — feature-flagged traces (gRPC/DB/Redis) + metrics (gRPC/DB pool/cache/config/schema), slog trace correlation, OTel Collector + Jaeger in docker-compose
+- [x] E2E tests — split into 7 domain-specific files + bench file, own module
+- [x] Lint cleanup — all golangci-lint issues fixed
+- [x] Proto documentation — comprehensive field-level comments across all 4 proto files
+- [x] OpenTelemetry integration — feature-flagged traces + metrics, slog trace correlation
+- [x] TypedValue oneof — native proto types (integer, number, string, bool, timestamp, duration, url, json) with null support
+- [x] Field validation — constraint validators, factory, per-tenant cache, strict mode, import validation, cache invalidation on UpdateTenant
+- [x] SDKs — configclient (typed getters/setters, snapshots, CAS), adminclient (schema/tenant/audit), configwatcher (live values)
+- [x] CLI tool — 26 commands, own module, unit tests
+- [x] Benchmarks — unit + e2e benchmark framework
+- [x] README + CONTRIBUTING updated
+- [x] Modules separated — server, CLI, e2e, api, 3 SDKs (7 modules total)
 - [ ] CI (GitHub Actions)
 
 ---

@@ -142,17 +142,19 @@ func run() int {
 	schemaMetrics := telemetry.NewSchemaMetrics(otelCfg)
 	telemetry.StartDBPoolMetrics(ctx, otelCfg, db.WritePool, db.ReadPool)
 
+	// Validator factory (shared between schema + config services).
+	configStore := config.NewPGStore(db.WritePool, db.ReadPool)
+	validatorFactory := validation.NewValidatorFactory(configStore)
+
 	// Register services.
 	if srv.IsServiceEnabled("schema") {
 		schemaStore := schema.NewPGStore(db.WritePool, db.ReadPool)
-		schemaSvc := schema.NewService(schemaStore, logger, schemaMetrics)
+		schemaSvc := schema.NewService(schemaStore, logger, schemaMetrics, validatorFactory.Cache())
 		pb.RegisterSchemaServiceServer(srv.GRPCServer(), schemaSvc)
 		srv.SetServiceHealthy("centralconfig.v1.SchemaService")
 		logger.InfoContext(ctx, "schema service enabled")
 	}
 	if srv.IsServiceEnabled("config") {
-		configStore := config.NewPGStore(db.WritePool, db.ReadPool)
-		validatorFactory := validation.NewValidatorFactory(configStore)
 		configSvc := config.NewService(configStore, configCache, publisher, subscriber, logger, cacheMetrics, configMetrics, validatorFactory)
 		pb.RegisterConfigServiceServer(srv.GRPCServer(), configSvc)
 		srv.SetServiceHealthy("centralconfig.v1.ConfigService")

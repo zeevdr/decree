@@ -1,6 +1,6 @@
 # Typed Proto Values + Field Validation
 
-**Status:** Complete (Phase 2 done, import validation deferred)
+**Status:** Complete
 **Started:** 2026-03-26
 
 ---
@@ -101,15 +101,15 @@ With typed proto, type parsing validators are no longer needed. Remaining valida
 
 ## Implementation Plan
 
-- [ ] Phase 1a: Add `TypedValue` to proto, regenerate
-- [ ] Phase 1b: Internal conversion layer (TypedValue ↔ string for DB storage)
-- [ ] Phase 1c: Update ConfigService read/write paths
-- [ ] Phase 1d: Update YAML export/import
-- [ ] Phase 1e: Update SDKs (configclient, configwatcher, adminclient)
-- [ ] Phase 1f: Update CLI, e2e tests
+- [x] Phase 0: Null support (optional string → TypedValue)
+- [x] Phase 1a: Add `TypedValue` oneof to proto, regenerate
+- [x] Phase 1b: Internal conversion layer (TypedValue ↔ string for DB storage)
+- [x] Phase 1c: Update ConfigService read/write paths
+- [x] Phase 1d: Update SDKs — typed Go getters/setters, no proto leakage
+- [x] Phase 1e: Update CLI, e2e tests, unit tests for typed values + null
 - [x] Phase 2a: Constraint validators (min/max, pattern, enum, url, json schema) — 19 unit tests
 - [x] Phase 2b: Validator factory + per-tenant cache
 - [x] Phase 2c: Wire into ConfigService (strict mode) for SetField/SetFields
-- [ ] Phase 2d: Wire validation into ImportConfig (deferred — import uses string values)
-- [ ] Phase 2e: E2e tests for validation
-- [ ] Cache invalidation on UpdateTenant
+- [x] Phase 2d: Wire validation into ImportConfig — 2 unit tests + 3 e2e subtests
+- [x] Phase 2e: E2e tests for validation — 8 subtests in TestConstraintValidation
+- [x] Cache invalidation on UpdateTenant

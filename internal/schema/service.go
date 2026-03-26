@@ -13,22 +13,25 @@ import (
 	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
 	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
 	"github.com/zeevdr/central-config-service/internal/telemetry"
+	"github.com/zeevdr/central-config-service/internal/validation"
 )
 
 // Service implements the SchemaService gRPC server.
 type Service struct {
 	pb.UnimplementedSchemaServiceServer
-	store   Store
-	logger  *slog.Logger
-	metrics *telemetry.SchemaMetrics
+	store          Store
+	logger         *slog.Logger
+	metrics        *telemetry.SchemaMetrics
+	validatorCache *validation.ValidatorCache
 }
 
 // NewService creates a new SchemaService.
-func NewService(store Store, logger *slog.Logger, metrics *telemetry.SchemaMetrics) *Service {
+func NewService(store Store, logger *slog.Logger, metrics *telemetry.SchemaMetrics, validatorCache *validation.ValidatorCache) *Service {
 	return &Service{
-		store:   store,
-		logger:  logger,
-		metrics: metrics,
+		store:          store,
+		logger:         logger,
+		metrics:        metrics,
+		validatorCache: validatorCache,
 	}
 }
 
@@ -406,6 +409,10 @@ func (s *Service) UpdateTenant(ctx context.Context, req *pb.UpdateTenantRequest)
 				return nil, status.Error(codes.NotFound, "tenant not found")
 			}
 			return nil, status.Error(codes.Internal, "failed to update tenant schema version")
+		}
+		// Invalidate cached validators — tenant now uses different field definitions.
+		if s.validatorCache != nil {
+			s.validatorCache.Invalidate(req.Id)
 		}
 	}
 
