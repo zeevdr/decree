@@ -4,7 +4,7 @@ TOOLS_IMAGE := central-config-tools
 TOOLS_SENTINEL := .tools-image-built
 DOCKER_RUN_TOOLS := docker run --rm -u $(shell id -u):$(shell id -g) -e HOME=/tmp -v $(CURDIR):/workspace -w /workspace $(TOOLS_IMAGE)
 
-.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e bench bench-e2e clean tools help
+.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e bench bench-e2e docs docs-api docs-cli docs-serve docs-deploy clean tools help
 
 all: generate lint test build
 
@@ -72,6 +72,26 @@ bench-e2e:
 	docker compose up -d --wait service
 	cd e2e && go test -tags=e2e -bench=. -benchmem -count=3 -run=^$ -timeout=300s ./... || (cd .. && docker compose down -v && exit 1)
 	docker compose down -v
+
+## docs: Generate all documentation (API + CLI)
+docs: docs-api docs-cli
+
+## docs-api: Generate proto API reference markdown
+docs-api: $(TOOLS_SENTINEL)
+	@mkdir -p docs/api
+	$(DOCKER_RUN_TOOLS) buf generate --template buf.gen.doc.yaml
+
+## docs-cli: Generate CLI reference markdown
+docs-cli:
+	go build -o $(BUILD_DIR)/ccs ./cmd/ccs && $(BUILD_DIR)/ccs gen-docs docs/cli
+
+## docs-serve: Local MkDocs preview (Docker) at http://localhost:8000
+docs-serve:
+	docker run --rm -p 8000:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material serve --dev-addr=0.0.0.0:8000
+
+## docs-deploy: Deploy docs to GitHub Pages
+docs-deploy:
+	docker run --rm -v $(CURDIR):/docs squidfunk/mkdocs-material gh-deploy --force
 
 ## clean: Remove build artifacts and generated code
 clean:

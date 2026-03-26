@@ -6,7 +6,19 @@ Schema-driven business configuration management for multi-tenant services.
 
 Central Config Service manages **business-oriented configuration** — approval rules, fee structures, settlement windows, feature parameters — the kind of config that lives between your infrastructure settings and your application code.
 
-Unlike tools like etcd, Consul, or Spring Cloud Config (which focus on system/infrastructure configuration), Central Config Service provides:
+### How is this different?
+
+**Feature flag tools** (LaunchDarkly, ConfigCat, Flagsmith) focus on boolean/multivariate flags for release management — not structured business configuration with schemas.
+
+**Infrastructure config tools** (etcd, Consul, Spring Cloud Config) are low-level key-value stores without typed schemas, validation, or multi-tenancy.
+
+**Cloud config services** (AWS AppConfig, Azure App Configuration) offer some validation but lack schema registries, gRPC APIs, real-time subscriptions, and are vendor-locked.
+
+**What makes Central Config Service unique:**
+
+No existing open-source tool combines a schema-first approach to typed configuration with native multi-tenancy, constraint validation, field-level locking, gRPC streaming, and versioned rollback — all in a single Go binary.
+
+### Features
 
 - **Typed values** — native proto types (integer, number, string, bool, timestamp, duration, url, json) with wire-level type safety
 - **Schema validation** — constraints (min/max, pattern, enum, JSON Schema) enforced on every write

@@ -194,7 +194,7 @@ message ConfigValue {
   // The typed value. Absent when the field value is null.
   TypedValue value = 2;
 
-  // SHA-256 checksum of the value. Used for optimistic concurrency control
+  // Checksum of the value (xxHash). Used for optimistic concurrency control
   // in SetField/SetFields via expected_checksum.
   string checksum = 3;
 

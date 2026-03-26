@@ -44,7 +44,7 @@ func (q *Queries) CreateConfigVersion(ctx context.Context, arg CreateConfigVersi
 }
 
 const getConfigValueAtVersion = `-- name: GetConfigValueAtVersion :one
-SELECT cv.field_path, cv.value, cv.description
+SELECT cv.field_path, cv.value, cv.checksum, cv.description
 FROM config_values cv
 JOIN config_versions ver ON ver.id = cv.config_version_id
 WHERE ver.tenant_id = $1
@@ -63,18 +63,24 @@ type GetConfigValueAtVersionParams struct {
 type GetConfigValueAtVersionRow struct {
 	FieldPath   string  `json:"field_path"`
 	Value       *string `json:"value"`
+	Checksum    *string `json:"checksum"`
 	Description *string `json:"description"`
 }
 
 func (q *Queries) GetConfigValueAtVersion(ctx context.Context, arg GetConfigValueAtVersionParams) (GetConfigValueAtVersionRow, error) {
 	row := q.db.QueryRow(ctx, getConfigValueAtVersion, arg.TenantID, arg.FieldPath, arg.Version)
 	var i GetConfigValueAtVersionRow
-	err := row.Scan(&i.FieldPath, &i.Value, &i.Description)
+	err := row.Scan(
+		&i.FieldPath,
+		&i.Value,
+		&i.Checksum,
+		&i.Description,
+	)
 	return i, err
 }
 
 const getConfigValues = `-- name: GetConfigValues :many
-SELECT config_version_id, field_path, value, description FROM config_values
+SELECT config_version_id, field_path, value, checksum, description FROM config_values
 WHERE config_version_id = $1
 ORDER BY field_path
 `
@@ -92,6 +98,7 @@ func (q *Queries) GetConfigValues(ctx context.Context, configVersionID pgtype.UU
 			&i.ConfigVersionID,
 			&i.FieldPath,
 			&i.Value,
+			&i.Checksum,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -129,7 +136,7 @@ func (q *Queries) GetConfigVersion(ctx context.Context, arg GetConfigVersionPara
 }
 
 const getFullConfigAtVersion = `-- name: GetFullConfigAtVersion :many
-SELECT DISTINCT ON (cv.field_path) cv.field_path, cv.value, cv.description
+SELECT DISTINCT ON (cv.field_path) cv.field_path, cv.value, cv.checksum, cv.description
 FROM config_values cv
 JOIN config_versions ver ON ver.id = cv.config_version_id
 WHERE ver.tenant_id = $1
@@ -145,6 +152,7 @@ type GetFullConfigAtVersionParams struct {
 type GetFullConfigAtVersionRow struct {
 	FieldPath   string  `json:"field_path"`
 	Value       *string `json:"value"`
+	Checksum    *string `json:"checksum"`
 	Description *string `json:"description"`
 }
 
@@ -157,7 +165,12 @@ func (q *Queries) GetFullConfigAtVersion(ctx context.Context, arg GetFullConfigA
 	items := []GetFullConfigAtVersionRow{}
 	for rows.Next() {
 		var i GetFullConfigAtVersionRow
-		if err := rows.Scan(&i.FieldPath, &i.Value, &i.Description); err != nil {
+		if err := rows.Scan(
+			&i.FieldPath,
+			&i.Value,
+			&i.Checksum,
+			&i.Description,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -230,14 +243,15 @@ func (q *Queries) ListConfigVersions(ctx context.Context, arg ListConfigVersions
 }
 
 const setConfigValue = `-- name: SetConfigValue :exec
-INSERT INTO config_values (config_version_id, field_path, value, description)
-VALUES ($1, $2, $3, $4)
+INSERT INTO config_values (config_version_id, field_path, value, checksum, description)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type SetConfigValueParams struct {
 	ConfigVersionID pgtype.UUID `json:"config_version_id"`
 	FieldPath       string      `json:"field_path"`
 	Value           *string     `json:"value"`
+	Checksum        *string     `json:"checksum"`
 	Description     *string     `json:"description"`
 }
 
@@ -246,6 +260,7 @@ func (q *Queries) SetConfigValue(ctx context.Context, arg SetConfigValueParams) 
 		arg.ConfigVersionID,
 		arg.FieldPath,
 		arg.Value,
+		arg.Checksum,
 		arg.Description,
 	)
 	return err

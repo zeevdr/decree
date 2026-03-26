@@ -101,7 +101,7 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
 			Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
-			Checksum:  computeChecksum(derefString(row.Value)),
+			Checksum:  derefString(row.Checksum),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
 			cv.Description = row.Description
@@ -148,7 +148,7 @@ func (s *Service) GetField(ctx context.Context, req *pb.GetFieldRequest) (*pb.Ge
 	cv := &pb.ConfigValue{
 		FieldPath: row.FieldPath,
 		Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
-		Checksum:  computeChecksum(derefString(row.Value)),
+		Checksum:  derefString(row.Checksum),
 	}
 	if req.IncludeDescription && row.Description != nil {
 		cv.Description = row.Description
@@ -184,7 +184,7 @@ func (s *Service) GetFields(ctx context.Context, req *pb.GetFieldsRequest) (*pb.
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
 			Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
-			Checksum:  computeChecksum(derefString(row.Value)),
+			Checksum:  derefString(row.Checksum),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
 			cv.Description = row.Description
@@ -238,10 +238,12 @@ func (s *Service) SetField(ctx context.Context, req *pb.SetFieldRequest) (*pb.Se
 			return fmt.Errorf("create config version: %w", txErr)
 		}
 
+		valStr := typedValueToString(req.Value)
 		if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
 			ConfigVersionID: newVersion.ID,
 			FieldPath:       req.FieldPath,
-			Value:           typedValueToString(req.Value),
+			Value:           valStr,
+			Checksum:        checksumPtr(valStr),
 			Description:     ptrString(req.GetValueDescription()),
 		}); txErr != nil {
 			return fmt.Errorf("set config value: %w", txErr)
@@ -332,10 +334,12 @@ func (s *Service) SetFields(ctx context.Context, req *pb.SetFieldsRequest) (*pb.
 		}
 
 		for i, update := range req.Updates {
+			updateValStr := typedValueToString(update.Value)
 			if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
 				ConfigVersionID: newVersion.ID,
 				FieldPath:       update.FieldPath,
-				Value:           typedValueToString(update.Value),
+				Value:           updateValStr,
+				Checksum:        checksumPtr(updateValStr),
 				Description:     ptrString(update.GetValueDescription()),
 			}); txErr != nil {
 				return fmt.Errorf("set config value %s: %w", update.FieldPath, txErr)
@@ -474,6 +478,7 @@ func (s *Service) RollbackToVersion(ctx context.Context, req *pb.RollbackToVersi
 				ConfigVersionID: newVersion.ID,
 				FieldPath:       row.FieldPath,
 				Value:           row.Value,
+				Checksum:        row.Checksum,
 				Description:     row.Description,
 			}); txErr != nil {
 				return fmt.Errorf("copy field %s: %w", row.FieldPath, txErr)
@@ -699,10 +704,12 @@ func (s *Service) ImportConfig(ctx context.Context, req *pb.ImportConfigRequest)
 		}
 
 		for i, v := range values {
+			importValStr := strPtr(v.Value)
 			if txErr = tx.SetConfigValue(ctx, dbstore.SetConfigValueParams{
 				ConfigVersionID: newVersion.ID,
 				FieldPath:       v.FieldPath,
-				Value:           strPtr(v.Value),
+				Value:           importValStr,
+				Checksum:        checksumPtr(importValStr),
 				Description:     v.Description,
 			}); txErr != nil {
 				return fmt.Errorf("set config value %s: %w", v.FieldPath, txErr)
@@ -837,7 +844,7 @@ func (s *Service) checkChecksum(ctx context.Context, tenantID pgtype.UUID, field
 		}
 		return status.Error(codes.Internal, "failed to get current value for checksum")
 	}
-	actual := computeChecksum(derefString(row.Value))
+	actual := derefString(row.Checksum)
 	if actual != expected {
 		return status.Errorf(codes.Aborted, "checksum mismatch for %s: expected %s, got %s", fieldPath, expected, actual)
 	}

@@ -1,6 +1,6 @@
 # Central Config Service — Implementation
 
-**Status:** In Progress
+**Status:** In Progress (Helm + CI remaining)
 **Started:** 2025-03-25
 
 ---
@@ -73,7 +73,9 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] Benchmarks — unit + e2e benchmark framework
 - [x] README + CONTRIBUTING updated
 - [x] Modules separated — server, CLI, e2e, api, 3 SDKs (7 modules total)
+- [x] Documentation infrastructure — protoc-gen-doc (API), cobra/doc (CLI), MkDocs Material, make docs targets
 - [ ] CI (GitHub Actions)
+- [ ] Helm chart
 
 ---
 

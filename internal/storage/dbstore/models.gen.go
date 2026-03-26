@@ -76,6 +76,7 @@ type ConfigValue struct {
 	ConfigVersionID pgtype.UUID `json:"config_version_id"`
 	FieldPath       string      `json:"field_path"`
 	Value           *string     `json:"value"`
+	Checksum        *string     `json:"checksum"`
 	Description     *string     `json:"description"`
 }
 

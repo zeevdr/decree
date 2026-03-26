@@ -1,6 +1,6 @@
 # Unit Benchmarks
 
-**Status:** Planning
+**Status:** Complete
 **Parent:** 10-benchmarks
 
 ---
@@ -23,7 +23,7 @@ Micro-benchmarks for hot-path functions using Go's `testing.B`. Run with `go tes
 - Regex pattern matching
 
 ### Checksums
-- `computeChecksum` — SHA-256 on value strings
+- `computeChecksum` — xxHash on value strings (stored in DB at write time)
 - `typedValueChecksum` — checksum via TypedValue
 
 ### YAML
@@ -82,8 +82,9 @@ benchstat old.txt new.txt
 
 ## Implementation Plan
 
-- [ ] Conversion benchmarks (`internal/config/convert_bench_test.go`)
-- [ ] Validation benchmarks (`internal/validation/validator_bench_test.go`)
-- [ ] YAML benchmarks (`internal/config/yaml_bench_test.go`, `internal/schema/yaml_bench_test.go`)
-- [ ] Cache benchmarks (`internal/validation/cache_bench_test.go`)
-- [ ] Add `make bench` target to Makefile
+- [x] Conversion benchmarks — 8 benchmarks (`internal/config/convert_bench_test.go`)
+- [x] Validation benchmarks — 9 benchmarks incl. cache parallel (`internal/validation/validator_bench_test.go`)
+- [x] Config YAML benchmarks — 3 benchmarks (`internal/config/yaml_bench_test.go`)
+- [x] Schema YAML benchmarks — 3 benchmarks (`internal/schema/yaml_bench_test.go`)
+- [x] Cache benchmarks — included in validator_bench_test.go (Get_Hit, Get_Hit_Parallel)
+- [x] `make bench` target in Makefile

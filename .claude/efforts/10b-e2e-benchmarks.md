@@ -1,6 +1,6 @@
 # E2E Benchmarks
 
-**Status:** Planning
+**Status:** Complete
 **Parent:** 10-benchmarks
 
 ---
@@ -126,10 +126,13 @@ bench-e2e:
 
 ## Implementation Plan
 
-- [ ] Benchmark helpers (setup/teardown schema+tenant for bench)
-- [ ] Read latency benchmarks (GetField cache hit/miss, GetConfig)
-- [ ] Write latency benchmarks (SetField, SetFields)
-- [ ] Parallel throughput benchmarks (reads, writes, mixed)
-- [ ] Subscription propagation latency benchmark
-- [ ] Import benchmark (varying field counts)
-- [ ] Add `make bench` and `make bench-e2e` to Makefile
+- [x] Benchmark helpers (benchEnv setup/teardown, dialBench)
+- [x] Read latency benchmarks (GetField, GetAll)
+- [x] Write latency benchmarks (SetField, SetInt)
+- [x] Parallel throughput benchmarks (GetField, GetAll, SetField)
+- [x] Mixed workload (90% read / 10% write)
+- [x] Import benchmark (10 and 50 fields)
+- [x] CAS round-trip (GetForUpdate + Set)
+- [x] Snapshot read benchmark
+- [x] `make bench` and `make bench-e2e` targets in Makefile
+- Note: Subscription propagation benchmark deferred (requires async stream setup in bench context)

@@ -72,7 +72,7 @@ type LockedValue struct {
 	FieldPath string
 	// Value is the current value at the time of the read.
 	Value string
-	// Checksum is the SHA-256 checksum of the value, used for compare-and-swap.
+	// Checksum is the hash of the value, used for compare-and-swap.
 	Checksum string
 
 	tenantID string

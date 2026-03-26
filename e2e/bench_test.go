@@ -165,3 +165,83 @@ func BenchmarkMixed_90Read_10Write(b *testing.B) {
 		}
 	}
 }
+
+// --- Import benchmark (varying field counts) ---
+
+func BenchmarkImport_10Fields(b *testing.B) {
+	benchImport(b, "bench-imp10", 10)
+}
+
+func BenchmarkImport_50Fields(b *testing.B) {
+	benchImport(b, "bench-imp50", 50)
+}
+
+func benchImport(b *testing.B, name string, fieldCount int) {
+	b.Helper()
+	conn := dialBench(b)
+	admin := newAdminClient(conn)
+	ctx := context.Background()
+
+	// Create schema with N string fields.
+	fields := make([]adminclient.Field, fieldCount)
+	for i := range fields {
+		fields[i] = adminclient.Field{Path: fmt.Sprintf("f.field_%d", i), Type: "FIELD_TYPE_STRING"}
+	}
+	s, err := admin.CreateSchema(ctx, name, fields, "")
+	require.NoError(b, err)
+	_, err = admin.PublishSchema(ctx, s.ID, 1)
+	require.NoError(b, err)
+
+	tenant, err := admin.CreateTenant(ctx, name+"-tenant", s.ID, 1)
+	require.NoError(b, err)
+
+	// Build YAML with all fields.
+	var yamlBuilder []byte
+	yamlBuilder = append(yamlBuilder, "syntax: \"v1\"\nvalues:\n"...)
+	for i := 0; i < fieldCount; i++ {
+		yamlBuilder = append(yamlBuilder, fmt.Sprintf("  f.field_%d:\n    value: \"val-%d\"\n", i, i)...)
+	}
+
+	b.Cleanup(func() {
+		_ = admin.DeleteTenant(ctx, tenant.ID)
+		_ = admin.DeleteSchema(ctx, s.ID)
+	})
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = admin.ImportConfig(ctx, tenant.ID, yamlBuilder, "bench import")
+	}
+}
+
+// --- CAS round-trip ---
+
+func BenchmarkGetForUpdate_ThenSet(b *testing.B) {
+	cfg, tenantID, cleanup := benchEnv(b, "bench-cas")
+	defer cleanup()
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for b.Loop() {
+		lv, err := cfg.GetForUpdate(ctx, tenantID, "bench.string")
+		if err != nil {
+			continue
+		}
+		_ = lv.Set(ctx, cfg, "updated")
+	}
+}
+
+// --- Snapshot read ---
+
+func BenchmarkSnapshot_GetAll(b *testing.B) {
+	cfg, tenantID, cleanup := benchEnv(b, "bench-snap")
+	defer cleanup()
+	ctx := context.Background()
+
+	snap, err := cfg.Snapshot(ctx, tenantID)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = snap.GetAll(ctx)
+	}
+}

@@ -20,8 +20,8 @@ ORDER BY version DESC
 LIMIT $2 OFFSET $3;
 
 -- name: SetConfigValue :exec
-INSERT INTO config_values (config_version_id, field_path, value, description)
-VALUES ($1, $2, $3, $4);
+INSERT INTO config_values (config_version_id, field_path, value, checksum, description)
+VALUES ($1, $2, $3, $4, $5);
 
 -- name: GetConfigValues :many
 SELECT * FROM config_values
@@ -29,7 +29,7 @@ WHERE config_version_id = $1
 ORDER BY field_path;
 
 -- name: GetConfigValueAtVersion :one
-SELECT cv.field_path, cv.value, cv.description
+SELECT cv.field_path, cv.value, cv.checksum, cv.description
 FROM config_values cv
 JOIN config_versions ver ON ver.id = cv.config_version_id
 WHERE ver.tenant_id = $1
@@ -39,7 +39,7 @@ ORDER BY ver.version DESC
 LIMIT 1;
 
 -- name: GetFullConfigAtVersion :many
-SELECT DISTINCT ON (cv.field_path) cv.field_path, cv.value, cv.description
+SELECT DISTINCT ON (cv.field_path) cv.field_path, cv.value, cv.checksum, cv.description
 FROM config_values cv
 JOIN config_versions ver ON ver.id = cv.config_version_id
 WHERE ver.tenant_id = $1

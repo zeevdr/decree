@@ -1,13 +1,13 @@
 package config
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -33,10 +33,19 @@ func uuidToString(id pgtype.UUID) string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", id.Bytes[0:4], id.Bytes[4:6], id.Bytes[6:8], id.Bytes[8:10], id.Bytes[10:16])
 }
 
-// computeChecksum computes a checksum for a config value.
+// computeChecksum computes a checksum for a config value using xxHash.
 func computeChecksum(value string) string {
-	h := sha256.Sum256([]byte(value))
-	return fmt.Sprintf("%x", h[:8])
+	h := xxhash.Sum64String(value)
+	return strconv.FormatUint(h, 16)
+}
+
+// checksumPtr computes a checksum for a *string value. Returns nil for nil input.
+func checksumPtr(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	cs := computeChecksum(*value)
+	return &cs
 }
 
 // configVersionToProto converts a DB config version to proto.

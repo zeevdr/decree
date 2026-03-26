@@ -793,7 +793,7 @@ type ConfigValue struct {
 	FieldPath string `protobuf:"bytes,1,opt,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
 	// The typed value. Absent when the field value is null.
 	Value *TypedValue `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	// SHA-256 checksum of the value. Used for optimistic concurrency control
+	// Checksum of the value (xxHash). Used for optimistic concurrency control
 	// in SetField/SetFields via expected_checksum.
 	Checksum string `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
 	// Human-readable description explaining this specific value.
