@@ -3,6 +3,8 @@ BUILD_DIR := bin
 TOOLS_IMAGE := central-config-tools
 TOOLS_SENTINEL := .tools-image-built
 DOCKER_RUN_TOOLS := docker run --rm -u $(shell id -u):$(shell id -g) -e HOME=/tmp -v $(CURDIR):/workspace -w /workspace $(TOOLS_IMAGE)
+MKDOCS_IMAGE := $(MKDOCS_IMAGE):9.7.6
+GOLANGCI_LINT_VERSION := v2.8.0
 
 .PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e bench bench-e2e docs docs-api docs-cli docs-serve docs-deploy clean tools help
 
@@ -87,11 +89,11 @@ docs-cli:
 
 ## docs-serve: Local MkDocs preview (Docker) at http://localhost:8000
 docs-serve:
-	docker run --rm -p 8000:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material serve --dev-addr=0.0.0.0:8000
+	docker run --rm -p 8000:8000 -v $(CURDIR):/docs $(MKDOCS_IMAGE) serve --dev-addr=0.0.0.0:8000
 
 ## docs-deploy: Deploy docs to GitHub Pages
 docs-deploy:
-	docker run --rm -v $(CURDIR):/docs squidfunk/mkdocs-material gh-deploy --force
+	docker run --rm -v $(CURDIR):/docs $(MKDOCS_IMAGE) gh-deploy --force
 
 ## clean: Remove build artifacts and generated code
 clean:

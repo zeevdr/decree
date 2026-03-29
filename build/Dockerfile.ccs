@@ -1,0 +1,28 @@
+# Build stage
+FROM golang:1.24-bookworm AS builder
+
+WORKDIR /app
+
+COPY go.work go.work.sum ./
+COPY go.mod go.sum ./
+COPY api/go.mod api/go.sum ./api/
+COPY sdk/configclient/go.mod sdk/configclient/go.sum ./sdk/configclient/
+COPY sdk/adminclient/go.mod sdk/adminclient/go.sum ./sdk/adminclient/
+COPY sdk/configwatcher/go.mod sdk/configwatcher/go.sum ./sdk/configwatcher/
+COPY cmd/ccs/go.mod cmd/ccs/go.sum ./cmd/ccs/
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -o /bin/ccs ./cmd/ccs
+
+# Runtime stage
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=builder /bin/ccs /bin/ccs
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/bin/ccs"]
