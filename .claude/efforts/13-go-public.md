@@ -1,6 +1,6 @@
 # Go Public Checklist
 
-**Status:** Planning
+**Status:** In Progress
 **Started:** 2026-03-29
 
 ---
@@ -11,40 +11,38 @@ Prepare the repo for public release on GitHub. Ensure it's clean, professional, 
 
 ## Must-Do (before flipping to public)
 
-- [ ] **Scan for secrets** — scan git history for leaked credentials, API keys, tokens. Tools: `gitleaks`, `trufflehog`, or `git log --all -p | grep -i password`
-- [ ] **LICENSE** — verify Apache 2.0 file exists and is correct
-- [ ] **Clean git history** — squash noisy CI fix commits, review full history for anything embarrassing
-- [ ] **README review** — final pass: links work, examples are accurate, positioning is clear
-- [ ] **Module paths** — confirm `github.com/zeevdr/decree` is the final org/repo name. Changing after people import is painful.
-- [ ] **Remove GOPRIVATE** — once public, no need for GOPRIVATE/GONOSUMCHECK. pkg.go.dev will index automatically.
-- [ ] **GitHub repo settings** — description, topics (`go`, `grpc`, `configuration`, `multi-tenant`, `schema-driven`), website URL (docs site)
+- [x] **Scan for secrets** — gitleaks: no leaks found (46 commits scanned)
+- [x] **LICENSE** — Apache 2.0 verified
+- [x] **README review** — badges, power tools section, architecture diagram fix
+- [x] **Module paths** — all 8 modules confirmed under `github.com/zeevdr/decree`
+- [x] **Remove GOPRIVATE** — not set anywhere, nothing to remove
+- [ ] **Clean git history** — squash noisy CI/Docker fix commits
+- [ ] **GitHub repo settings** — description, topics, website URL
 
 ## Should-Do (before or shortly after)
 
-- [ ] **Tag v0.1.0** — first release. Triggers CI to build images, enables `go install`, pkg.go.dev indexing
-- [ ] **GitHub Actions** — verify GITHUB_TOKEN has packages:write for ghcr.io image push
-- [ ] **Branch protection** — require PR reviews, require CI to pass before merge to main
-- [ ] **Issue templates** — `.github/ISSUE_TEMPLATE/bug_report.md` + `feature_request.md`
-- [ ] **SECURITY.md** — vulnerability reporting instructions
-- [ ] **Code of Conduct** — `CODE_OF_CONDUCT.md` (Contributor Covenant is standard)
+- [ ] **Tag v0.1.0** — first release
+- [ ] **GitHub Actions** — verify GITHUB_TOKEN has packages:write for ghcr.io
+- [ ] **Branch protection** — require PR reviews, require CI to pass
+- [x] **Issue templates** — bug report + feature request
+- [x] **SECURITY.md** — vulnerability reporting instructions
+- [x] **Code of Conduct** — Contributor Covenant v2.1 (by reference)
 
 ## Nice-to-Have
 
-- [ ] **README badges** — CI status, Go version, license, ghcr.io image
+- [x] **README badges** — CI status, Go version, license
 - [ ] **Social preview** — repo card image for link sharing
 - [ ] **GitHub Discussions** — enable for Q&A and community
-- [ ] **Example repo** — separate repo with runnable examples per use case
-- [ ] **Blog post / announcement** — introduce DECREE, explain positioning
+- [ ] **Example repo** — separate repo with runnable examples
+- [ ] **Blog post / announcement** — introduce OpenDecree
 
 ## Implementation Order
 
-1. Scan for secrets (safety first)
-2. License + module path confirmation
-3. Clean git history (last chance before public)
-4. README final review
+1. ~~Scan for secrets~~ done
+2. ~~License + module path confirmation~~ done
+3. Clean git history (in progress)
+4. ~~README final review~~ done
 5. GitHub repo settings
 6. Flip to public
 7. Tag v0.1.0
 8. Verify pkg.go.dev, ghcr.io, CI
-9. Issue templates, SECURITY.md, Code of Conduct
-10. Badges, social preview, discussions
