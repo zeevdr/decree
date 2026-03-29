@@ -11,7 +11,7 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
 )
 
 // GRPCInterceptor provides unary and stream interceptors for gRPC.

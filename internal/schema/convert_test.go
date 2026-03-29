@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/storage/dbstore"
 )
 
 func TestParseUUID_Valid(t *testing.T) {

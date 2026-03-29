@@ -14,13 +14,13 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/internal/auth"
-	"github.com/zeevdr/central-config-service/internal/cache"
-	"github.com/zeevdr/central-config-service/internal/pubsub"
-	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
-	"github.com/zeevdr/central-config-service/internal/telemetry"
-	"github.com/zeevdr/central-config-service/internal/validation"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/auth"
+	"github.com/zeevdr/decree/internal/cache"
+	"github.com/zeevdr/decree/internal/pubsub"
+	"github.com/zeevdr/decree/internal/storage/dbstore"
+	"github.com/zeevdr/decree/internal/telemetry"
+	"github.com/zeevdr/decree/internal/validation"
 )
 
 const defaultCacheTTL = 5 * time.Minute

@@ -1,4 +1,4 @@
-# Central Config Service — Implementation
+# OpenDecree — Implementation
 
 **Status:** In Progress (Helm remaining)
 **Started:** 2025-03-25

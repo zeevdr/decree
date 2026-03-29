@@ -15,7 +15,7 @@ Prepare the repo for public release on GitHub. Ensure it's clean, professional, 
 - [ ] **LICENSE** — verify Apache 2.0 file exists and is correct
 - [ ] **Clean git history** — squash noisy CI fix commits, review full history for anything embarrassing
 - [ ] **README review** — final pass: links work, examples are accurate, positioning is clear
-- [ ] **Module paths** — confirm `github.com/zeevdr/central-config-service` is the final org/repo name. Changing after people import is painful.
+- [ ] **Module paths** — confirm `github.com/zeevdr/decree` is the final org/repo name. Changing after people import is painful.
 - [ ] **Remove GOPRIVATE** — once public, no need for GOPRIVATE/GONOSUMCHECK. pkg.go.dev will index automatically.
 - [ ] **GitHub repo settings** — description, topics (`go`, `grpc`, `configuration`, `multi-tenant`, `schema-driven`), website URL (docs site)
 
@@ -34,7 +34,7 @@ Prepare the repo for public release on GitHub. Ensure it's clean, professional, 
 - [ ] **Social preview** — repo card image for link sharing
 - [ ] **GitHub Discussions** — enable for Q&A and community
 - [ ] **Example repo** — separate repo with runnable examples per use case
-- [ ] **Blog post / announcement** — introduce CCS, explain positioning
+- [ ] **Blog post / announcement** — introduce DECREE, explain positioning
 
 ## Implementation Order
 

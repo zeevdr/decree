@@ -14,10 +14,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/internal/auth"
-	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
-	"github.com/zeevdr/central-config-service/internal/validation"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/auth"
+	"github.com/zeevdr/decree/internal/storage/dbstore"
+	"github.com/zeevdr/decree/internal/validation"
 )
 
 var testLogger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))

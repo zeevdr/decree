@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/sdk/configclient"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/sdk/configclient"
 )
 
 func sp(s string) *string { return &s }

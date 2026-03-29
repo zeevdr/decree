@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: central-config-service
+          - image: decree
             dockerfile: build/Dockerfile
             context: .
           - image: ccs

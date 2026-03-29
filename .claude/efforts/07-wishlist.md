@@ -8,7 +8,7 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 ## Infrastructure
 
-- [ ] **Docker images on ghcr.io** — publish server (`ghcr.io/zeevdr/central-config-service`) and CLI (`ghcr.io/zeevdr/ccs`) images. CLI needs its own Dockerfile (distroless). Manual push initially, CI-automated later.
+- [ ] **Docker images on ghcr.io** — publish server (`ghcr.io/zeevdr/decree`) and CLI (`ghcr.io/zeevdr/decree`) images. CLI needs its own Dockerfile (distroless). Manual push initially, CI-automated later.
 - [ ] **Helm chart** — Kubernetes deployment with configurable replicas, resource limits, env vars
 - [ ] **CI (GitHub Actions)** — lint, test, build, e2e on PR; image push on tag/release to ghcr.io
 - [ ] **Usage stats recording** — async batched read tracking (deferred from AuditService)

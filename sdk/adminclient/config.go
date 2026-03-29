@@ -3,7 +3,7 @@ package adminclient
 import (
 	"context"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
 )
 
 // ListConfigVersions returns all config versions for a tenant, newest first.

@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/storage/dbstore"
 )
 
 // Store defines the data access needed by the validator factory.

@@ -10,10 +10,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
-	"github.com/zeevdr/central-config-service/internal/telemetry"
-	"github.com/zeevdr/central-config-service/internal/validation"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/storage/dbstore"
+	"github.com/zeevdr/decree/internal/telemetry"
+	"github.com/zeevdr/decree/internal/validation"
 )
 
 // Service implements the SchemaService gRPC server.

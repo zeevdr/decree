@@ -190,4 +190,4 @@ When writing config values, the server operates in **strict mode**: writes to fi
 - [Typed Values](typed-values.md) — the TypedValue type system
 - [Tenants](tenants.md) — how schemas are assigned to tenants
 - [API Reference — SchemaService](../api/api-reference.md) — full RPC details
-- [CLI — ccs schema](../cli/ccs_schema.md) — managing schemas from the command line
+- [CLI — decree schema](../cli/decree_schema.md) — managing schemas from the command line

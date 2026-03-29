@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/internal/version"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/version"
 )
 
 // VersionService implements the VersionService gRPC server.

@@ -15,18 +15,18 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
-	"github.com/zeevdr/central-config-service/internal/audit"
-	"github.com/zeevdr/central-config-service/internal/auth"
-	"github.com/zeevdr/central-config-service/internal/cache"
-	"github.com/zeevdr/central-config-service/internal/config"
-	"github.com/zeevdr/central-config-service/internal/pubsub"
-	"github.com/zeevdr/central-config-service/internal/schema"
-	"github.com/zeevdr/central-config-service/internal/server"
-	"github.com/zeevdr/central-config-service/internal/storage"
-	"github.com/zeevdr/central-config-service/internal/telemetry"
-	"github.com/zeevdr/central-config-service/internal/validation"
-	"github.com/zeevdr/central-config-service/internal/version"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/audit"
+	"github.com/zeevdr/decree/internal/auth"
+	"github.com/zeevdr/decree/internal/cache"
+	"github.com/zeevdr/decree/internal/config"
+	"github.com/zeevdr/decree/internal/pubsub"
+	"github.com/zeevdr/decree/internal/schema"
+	"github.com/zeevdr/decree/internal/server"
+	"github.com/zeevdr/decree/internal/storage"
+	"github.com/zeevdr/decree/internal/telemetry"
+	"github.com/zeevdr/decree/internal/validation"
+	"github.com/zeevdr/decree/internal/version"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func run() int {
 
 	// Logger — wrap with trace correlation if OTel is enabled.
 	logger := newLogger(cfg.LogLevel, otelCfg.Enabled)
-	logger.Info("starting central-config-service", "version", version.Version, "commit", version.Commit)
+	logger.Info("starting decree", "version", version.Version, "commit", version.Commit)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -189,7 +189,7 @@ func run() int {
 
 	cancel()
 	srv.GracefulStop(ctx)
-	logger.InfoContext(ctx, "central-config-service stopped")
+	logger.InfoContext(ctx, "decree stopped")
 	return 0
 }
 

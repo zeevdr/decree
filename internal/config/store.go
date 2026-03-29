@@ -5,7 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/zeevdr/central-config-service/internal/storage/dbstore"
+	"github.com/zeevdr/decree/internal/storage/dbstore"
 )
 
 // Store defines the data access interface for config operations.

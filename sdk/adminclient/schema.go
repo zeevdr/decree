@@ -3,7 +3,7 @@ package adminclient
 import (
 	"context"
 
-	pb "github.com/zeevdr/central-config-service/api/centralconfig/v1"
+	pb "github.com/zeevdr/decree/api/centralconfig/v1"
 )
 
 // CreateSchema creates a new schema with an initial draft version (v1).

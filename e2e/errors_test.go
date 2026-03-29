@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/zeevdr/central-config-service/sdk/adminclient"
-	"github.com/zeevdr/central-config-service/sdk/configclient"
+	"github.com/zeevdr/decree/sdk/adminclient"
+	"github.com/zeevdr/decree/sdk/configclient"
 )
 
 // --- Error Cases (SDK sentinel errors) ---

@@ -121,8 +121,8 @@ const file_centralconfig_v1_version_service_proto_rawDesc = "" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit2{\n" +
 	"\x0eVersionService\x12i\n" +
-	"\x10GetServerVersion\x12).centralconfig.v1.GetServerVersionRequest\x1a*.centralconfig.v1.GetServerVersionResponseB\xdb\x01\n" +
-	"\x14com.centralconfig.v1B\x13VersionServiceProtoP\x01ZMgithub.com/zeevdr/central-config-service/api/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
+	"\x10GetServerVersion\x12).centralconfig.v1.GetServerVersionRequest\x1a*.centralconfig.v1.GetServerVersionResponseB\xcb\x01\n" +
+	"\x14com.centralconfig.v1B\x13VersionServiceProtoP\x01Z=github.com/zeevdr/decree/api/centralconfig/v1;centralconfigv1\xa2\x02\x03CXX\xaa\x02\x10Centralconfig.V1\xca\x02\x10Centralconfig\\V1\xe2\x02\x1cCentralconfig\\V1\\GPBMetadata\xea\x02\x11Centralconfig::V1b\x06proto3"
 
 var (
 	file_centralconfig_v1_version_service_proto_rawDescOnce sync.Once

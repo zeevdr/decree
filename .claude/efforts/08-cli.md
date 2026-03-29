@@ -10,11 +10,11 @@
 
 ## Remaining: Phase 3 — Power Tools
 
-- [ ] `ccs docs generate` — schema → markdown docs
-- [ ] `ccs diff` — config version diffing
-- [ ] `ccs validate` — offline YAML validation
-- [ ] `ccs seed` — bootstrap: schema + tenant + config from YAML in one command
-- [ ] `ccs dump` — full tenant backup (schema + config + locks)
+- [ ] `decree docs generate` — schema → markdown docs
+- [ ] `decree diff` — config version diffing
+- [ ] `decree validate` — offline YAML validation
+- [ ] `decree seed` — bootstrap: schema + tenant + config from YAML in one command
+- [ ] `decree dump` — full tenant backup (schema + config + locks)
 
 ## Phase 4 — Polish (wishlist)
 

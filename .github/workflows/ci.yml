@@ -66,7 +66,7 @@ jobs:
           go-version: "1.24"
 
       - name: Build server
-        run: go build -o bin/central-config-service ./cmd/server
+        run: go build -o bin/decree ./cmd/server
 
       - name: Build CLI
         run: cd cmd/ccs && go build -o ../../bin/ccs .

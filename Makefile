@@ -1,4 +1,4 @@
-BINARY_NAME := central-config-service
+BINARY_NAME := decree-server
 BUILD_DIR := bin
 TOOLS_IMAGE := central-config-tools
 TOOLS_SENTINEL := .tools-image-built
@@ -46,12 +46,12 @@ lint-proto: $(TOOLS_SENTINEL)
 ## build: Build the service binary
 GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
-SERVER_LDFLAGS := -X github.com/zeevdr/central-config-service/internal/version.Version=$(GIT_VERSION) -X github.com/zeevdr/central-config-service/internal/version.Commit=$(GIT_COMMIT)
+SERVER_LDFLAGS := -X github.com/zeevdr/decree/internal/version.Version=$(GIT_VERSION) -X github.com/zeevdr/decree/internal/version.Commit=$(GIT_COMMIT)
 CLI_LDFLAGS := -X main.cliVersion=$(GIT_VERSION) -X main.cliCommit=$(GIT_COMMIT)
 
 build:
 	go build -ldflags '$(SERVER_LDFLAGS)' -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/server
-	cd cmd/ccs && go build -ldflags '$(CLI_LDFLAGS)' -o ../../$(BUILD_DIR)/ccs .
+	cd cmd/decree && go build -ldflags '$(CLI_LDFLAGS)' -o ../../$(BUILD_DIR)/decree .
 
 ## image: Build the Docker image
 image:
@@ -91,7 +91,7 @@ docs-api: $(TOOLS_SENTINEL)
 
 ## docs-cli: Generate CLI reference markdown
 docs-cli:
-	cd cmd/ccs && go build -ldflags '$(CLI_LDFLAGS)' -o ../../$(BUILD_DIR)/ccs . && cd ../.. && $(BUILD_DIR)/ccs gen-docs docs/cli
+	cd cmd/decree && go build -ldflags '$(CLI_LDFLAGS)' -o ../../$(BUILD_DIR)/decree . && cd ../.. && $(BUILD_DIR)/decree gen-docs docs/cli
 
 ## docs-serve: Local MkDocs preview (Docker) at http://localhost:8000
 docs-serve:
