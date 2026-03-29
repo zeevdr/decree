@@ -75,7 +75,7 @@ go get github.com/zeevdr/decree/sdk/configwatcher@latest
 ## CLI
 
 ```bash
-go install github.com/zeevdr/decree/cmd/ccs@latest
+go install github.com/zeevdr/decree/cmd/decree@latest
 
 decree schema list
 decree schema import --publish schema.yaml      # import + auto-publish

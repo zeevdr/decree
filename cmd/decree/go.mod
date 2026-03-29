@@ -1,4 +1,4 @@
-module github.com/zeevdr/decree/cmd/ccs
+module github.com/zeevdr/decree/cmd/decree
 
 go 1.24.0
 

@@ -27,8 +27,8 @@ jobs:
           - image: decree
             dockerfile: build/Dockerfile
             context: .
-          - image: ccs
-            dockerfile: build/Dockerfile.ccs
+          - image: decree-cli
+            dockerfile: build/Dockerfile.decree
             context: .
     steps:
       - uses: actions/checkout@v6
