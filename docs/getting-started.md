@@ -73,10 +73,14 @@ fields:
 Import and publish it:
 
 ```bash
-# Import creates the schema as a draft (v1)
-ccs schema import payments.yaml
+# Import and auto-publish in one step
+ccs schema import --publish payments.yaml
+```
 
-# Note the schema ID from the output, then publish it
+Or import as draft first, then publish separately:
+
+```bash
+ccs schema import payments.yaml
 ccs schema publish <schema-id> 1
 ```
 

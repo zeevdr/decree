@@ -180,11 +180,16 @@ var schemaImportCmd = &cobra.Command{
 		}
 		defer func() { _ = conn.Close() }()
 
-		s, err := newAdminClient(conn).ImportSchema(cmd.Context(), data)
+		publish, _ := cmd.Flags().GetBool("publish")
+		s, err := newAdminClient(conn).ImportSchema(cmd.Context(), data, publish)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Imported %s v%d\n", s.Name, s.Version)
+		if s.Published {
+			fmt.Printf("Imported and published %s v%d\n", s.Name, s.Version)
+		} else {
+			fmt.Printf("Imported %s v%d (draft)\n", s.Name, s.Version)
+		}
 		return nil
 	},
 }
@@ -193,6 +198,7 @@ func init() {
 	schemaCreateCmd.Flags().StringP("file", "f", "", "YAML file with schema definition")
 	schemaGetCmd.Flags().Int32("version", 0, "specific version (default: latest)")
 	schemaExportCmd.Flags().Int32("version", 0, "specific version (default: latest)")
+	schemaImportCmd.Flags().Bool("publish", false, "auto-publish the imported version")
 
 	schemaCmd.AddCommand(schemaCreateCmd)
 	schemaCmd.AddCommand(schemaGetCmd)

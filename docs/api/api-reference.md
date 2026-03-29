@@ -1204,7 +1204,8 @@ bypasses the cache and reads directly from the database.
 
 Import uses full-replace semantics: - If no schema with this name exists: creates a new schema with version 1. - If a schema exists and fields differ from latest: creates the next version. - If a schema exists and fields are identical: returns AlreadyExists error.
 
-Imported versions are always created as drafts (unpublished). The `version` field in the YAML is informational — the server assigns the next version number automatically. |
+Imported versions are created as drafts (unpublished) unless auto_publish is true. The `version` field in the YAML is informational — the server assigns the next version number automatically. |
+| auto_publish | [bool](#bool) |  | When true, the imported version is automatically published after creation. If the schema already exists and fields are identical (AlreadyExists), this has no effect. |
 
 
 

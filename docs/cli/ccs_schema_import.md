@@ -13,7 +13,8 @@ ccs schema import <file> [flags]
 ### Options
 
 ```
-  -h, --help   help for import
+  -h, --help      help for import
+      --publish   auto-publish the imported version
 ```
 
 ### Options inherited from parent commands

@@ -78,8 +78,7 @@ go get github.com/zeevdr/central-config-service/sdk/configwatcher@latest
 go install github.com/zeevdr/central-config-service/cmd/ccs@latest
 
 ccs schema list
-ccs schema import schema.yaml
-ccs schema publish <schema-id> 1
+ccs schema import --publish schema.yaml      # import + auto-publish
 
 ccs tenant create --name acme --schema <id> --schema-version 1
 ccs config set <tenant-id> payments.fee 0.5%
@@ -116,8 +115,7 @@ docker compose up -d --wait service
 export CCS_SUBJECT=admin@example.com
 
 # Create and publish a schema
-ccs schema import examples/schema.yaml
-ccs schema publish <schema-id> 1
+ccs schema import --publish examples/schema.yaml
 
 # Create a tenant and set config
 ccs tenant create --name acme --schema <schema-id> --schema-version 1

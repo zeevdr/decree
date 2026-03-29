@@ -172,7 +172,7 @@ constraints:
     - **Doesn't exist** → creates new schema with v1
     - **Exists, fields differ** → creates the next version as a draft
     - **Exists, fields identical** → returns `AlreadyExists` (no-op)
-- Imported versions are always **drafts** (unpublished)
+- Imported versions are **drafts** by default. Use `--publish` (CLI) or `auto_publish` (API) to auto-publish on import.
 - The `version` field in YAML is informational — server assigns the next version
 - Full-replace semantics: the YAML defines the complete field set, not a diff
 
