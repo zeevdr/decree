@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/zeevdr/central-config-service/sdk/adminclient"
 )
 
 var configCmd = &cobra.Command{
@@ -192,6 +194,19 @@ var configImportCmd = &cobra.Command{
 			return fmt.Errorf("read file: %w", err)
 		}
 		desc, _ := cmd.Flags().GetString("description")
+		modeStr, _ := cmd.Flags().GetString("mode")
+
+		var mode adminclient.ImportMode
+		switch modeStr {
+		case "merge":
+			mode = adminclient.ImportModeMerge
+		case "replace":
+			mode = adminclient.ImportModeReplace
+		case "defaults":
+			mode = adminclient.ImportModeDefaults
+		default:
+			mode = adminclient.ImportModeMerge
+		}
 
 		conn, err := dialServer()
 		if err != nil {
@@ -199,7 +214,7 @@ var configImportCmd = &cobra.Command{
 		}
 		defer func() { _ = conn.Close() }()
 
-		v, err := newAdminClient(conn).ImportConfig(cmd.Context(), args[0], data, desc)
+		v, err := newAdminClient(conn).ImportConfig(cmd.Context(), args[0], data, desc, mode)
 		if err != nil {
 			return err
 		}
@@ -213,6 +228,7 @@ func init() {
 	configRollbackCmd.Flags().String("description", "", "version description")
 	configExportCmd.Flags().Int32("version", 0, "specific version (default: latest)")
 	configImportCmd.Flags().String("description", "", "version description")
+	configImportCmd.Flags().String("mode", "merge", "import mode: merge, replace, or defaults")
 
 	configCmd.AddCommand(configGetCmd)
 	configCmd.AddCommand(configGetAllCmd)

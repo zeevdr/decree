@@ -56,6 +56,8 @@
     - [SubscribeRequest](#centralconfig-v1-SubscribeRequest)
     - [SubscribeResponse](#centralconfig-v1-SubscribeResponse)
   
+    - [ImportMode](#centralconfig-v1-ImportMode)
+  
     - [ConfigService](#centralconfig-v1-ConfigService)
   
 - [centralconfig/v1/schema_service.proto](#centralconfig_v1_schema_service-proto)
@@ -755,6 +757,7 @@ FieldUpdate represents a single field change within a SetFields batch.
 | tenant_id | [string](#string) |  | Tenant ID (UUID). |
 | yaml_content | [bytes](#bytes) |  | YAML-encoded configuration values to import. |
 | description | [string](#string) | optional | Description for the new config version created by the import. |
+| mode | [ImportMode](#centralconfig-v1-ImportMode) |  | Import mode. Defaults to IMPORT_MODE_MERGE. |
 
 
 
@@ -939,6 +942,20 @@ FieldUpdate represents a single field change within a SetFields batch.
 
 
  
+
+
+<a name="centralconfig-v1-ImportMode"></a>
+
+### ImportMode
+ImportMode controls how imported values interact with existing config.
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| IMPORT_MODE_UNSPECIFIED | 0 | Unspecified defaults to merge behavior. |
+| IMPORT_MODE_MERGE | 1 | Merge: update fields from YAML that differ, keep runtime overrides for fields not in the YAML. |
+| IMPORT_MODE_REPLACE | 2 | Replace: full replace — all fields from YAML are set, fields not in YAML are not carried forward. Runtime overrides are wiped. |
+| IMPORT_MODE_DEFAULTS | 3 | Defaults: only set fields that have no value yet. Fields that already have a value are skipped regardless of the YAML content. |
+
 
  
 

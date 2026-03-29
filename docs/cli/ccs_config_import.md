@@ -15,6 +15,7 @@ ccs config import <tenant-id> <file> [flags]
 ```
       --description string   version description
   -h, --help                 help for import
+      --mode string          import mode: merge, replace, or defaults (default "merge")
 ```
 
 ### Options inherited from parent commands
