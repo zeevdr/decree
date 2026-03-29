@@ -74,52 +74,18 @@ func NewFieldValidator(fieldPath string, fieldType pb.FieldType, nullable bool, 
 	// Build constraint checks based on field type.
 	switch fieldType {
 	case pb.FieldType_FIELD_TYPE_INT:
-		if constraints.Min != nil {
-			min := *constraints.Min
-			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
-				val := tv.Kind.(*pb.TypedValue_IntegerValue).IntegerValue
-				if float64(val) < min {
-					return fmt.Errorf("value %d is less than minimum %v", val, min)
-				}
-				return nil
-			})
-		}
-		if constraints.Max != nil {
-			max := *constraints.Max
-			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
-				val := tv.Kind.(*pb.TypedValue_IntegerValue).IntegerValue
-				if float64(val) > max {
-					return fmt.Errorf("value %d is greater than maximum %v", val, max)
-				}
-				return nil
-			})
-		}
+		addNumericChecks(&v.checks, constraints, func(tv *pb.TypedValue) float64 {
+			return float64(tv.Kind.(*pb.TypedValue_IntegerValue).IntegerValue)
+		})
 
 	case pb.FieldType_FIELD_TYPE_NUMBER:
-		if constraints.Min != nil {
-			min := *constraints.Min
-			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
-				val := tv.Kind.(*pb.TypedValue_NumberValue).NumberValue
-				if val < min {
-					return fmt.Errorf("value %v is less than minimum %v", val, min)
-				}
-				return nil
-			})
-		}
-		if constraints.Max != nil {
-			max := *constraints.Max
-			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
-				val := tv.Kind.(*pb.TypedValue_NumberValue).NumberValue
-				if val > max {
-					return fmt.Errorf("value %v is greater than maximum %v", val, max)
-				}
-				return nil
-			})
-		}
+		addNumericChecks(&v.checks, constraints, func(tv *pb.TypedValue) float64 {
+			return tv.Kind.(*pb.TypedValue_NumberValue).NumberValue
+		})
 
 	case pb.FieldType_FIELD_TYPE_STRING:
-		if constraints.Min != nil {
-			min := int(*constraints.Min)
+		if constraints.MinLength != nil {
+			min := int(*constraints.MinLength)
 			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
 				val := tv.Kind.(*pb.TypedValue_StringValue).StringValue
 				if len(val) < min {
@@ -128,8 +94,8 @@ func NewFieldValidator(fieldPath string, fieldType pb.FieldType, nullable bool, 
 				return nil
 			})
 		}
-		if constraints.Max != nil {
-			max := int(*constraints.Max)
+		if constraints.MaxLength != nil {
+			max := int(*constraints.MaxLength)
 			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
 				val := tv.Kind.(*pb.TypedValue_StringValue).StringValue
 				if len(val) > max {
@@ -152,26 +118,9 @@ func NewFieldValidator(fieldPath string, fieldType pb.FieldType, nullable bool, 
 		}
 
 	case pb.FieldType_FIELD_TYPE_DURATION:
-		if constraints.Min != nil {
-			min := *constraints.Min
-			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
-				val := tv.Kind.(*pb.TypedValue_DurationValue).DurationValue.AsDuration().Seconds()
-				if val < min {
-					return fmt.Errorf("duration %vs is less than minimum %vs", val, min)
-				}
-				return nil
-			})
-		}
-		if constraints.Max != nil {
-			max := *constraints.Max
-			v.checks = append(v.checks, func(tv *pb.TypedValue) error {
-				val := tv.Kind.(*pb.TypedValue_DurationValue).DurationValue.AsDuration().Seconds()
-				if val > max {
-					return fmt.Errorf("duration %vs is greater than maximum %vs", val, max)
-				}
-				return nil
-			})
-		}
+		addNumericChecks(&v.checks, constraints, func(tv *pb.TypedValue) float64 {
+			return tv.Kind.(*pb.TypedValue_DurationValue).DurationValue.AsDuration().Seconds()
+		})
 
 	case pb.FieldType_FIELD_TYPE_URL:
 		// URL validity already checked above (unconditionally).
@@ -243,6 +192,46 @@ func checkType(tv *pb.TypedValue, expected pb.FieldType) error {
 		}
 	}
 	return nil
+}
+
+// addNumericChecks adds min/max and exclusiveMin/exclusiveMax checks for numeric types.
+func addNumericChecks(checks *[]checkFunc, c *pb.FieldConstraints, extract func(*pb.TypedValue) float64) {
+	if c.Min != nil {
+		min := *c.Min
+		*checks = append(*checks, func(tv *pb.TypedValue) error {
+			if extract(tv) < min {
+				return fmt.Errorf("value %v is less than minimum %v", extract(tv), min)
+			}
+			return nil
+		})
+	}
+	if c.Max != nil {
+		max := *c.Max
+		*checks = append(*checks, func(tv *pb.TypedValue) error {
+			if extract(tv) > max {
+				return fmt.Errorf("value %v is greater than maximum %v", extract(tv), max)
+			}
+			return nil
+		})
+	}
+	if c.ExclusiveMin != nil {
+		emin := *c.ExclusiveMin
+		*checks = append(*checks, func(tv *pb.TypedValue) error {
+			if extract(tv) <= emin {
+				return fmt.Errorf("value %v must be greater than %v", extract(tv), emin)
+			}
+			return nil
+		})
+	}
+	if c.ExclusiveMax != nil {
+		emax := *c.ExclusiveMax
+		*checks = append(*checks, func(tv *pb.TypedValue) error {
+			if extract(tv) >= emax {
+				return fmt.Errorf("value %v must be less than %v", extract(tv), emax)
+			}
+			return nil
+		})
+	}
 }
 
 // typedValueToString extracts a string representation for enum comparison.

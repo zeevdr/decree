@@ -113,3 +113,13 @@ With typed proto, type parsing validators are no longer needed. Remaining valida
 - [x] Phase 2d: Wire validation into ImportConfig — 2 unit tests + 3 e2e subtests
 - [x] Phase 2e: E2e tests for validation — 8 subtests in TestConstraintValidation
 - [x] Cache invalidation on UpdateTenant
+
+### Phase 3: Constraint extensions (OAS-aligned)
+- [x] Separate `minLength`/`maxLength` for string length (unbundle from `minimum`/`maximum`)
+- [x] `minimum`/`maximum` become numeric-only (integer, number, duration)
+- [x] Add `exclusiveMinimum`/`exclusiveMaximum` for strict range checks (`>` / `<` instead of `>=` / `<=`)
+- [x] Update proto FieldConstraints
+- [x] Update validators
+- [x] Update schema YAML mapping + JSON Schema
+- [x] Update docs
+- [x] Tests — 17 unit + 6 e2e subtests + constraint/type validation at schema creation

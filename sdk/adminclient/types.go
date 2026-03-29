@@ -37,11 +37,15 @@ type Field struct {
 
 // FieldConstraints defines validation rules for a field.
 type FieldConstraints struct {
-	Min        *float64
-	Max        *float64
-	Pattern    string
-	Enum       []string
-	JSONSchema string
+	Min              *float64
+	Max              *float64
+	ExclusiveMin     *float64
+	ExclusiveMax     *float64
+	MinLength        *int32
+	MaxLength        *int32
+	Pattern          string
+	Enum             []string
+	JSONSchema       string
 }
 
 // Tenant represents a tenant assigned to a schema.
@@ -168,9 +172,13 @@ func constraintsToProto(c *FieldConstraints) *pb.FieldConstraints {
 		return nil
 	}
 	pc := &pb.FieldConstraints{
-		Min:        c.Min,
-		Max:        c.Max,
-		EnumValues: c.Enum,
+		Min:          c.Min,
+		Max:          c.Max,
+		ExclusiveMin: c.ExclusiveMin,
+		ExclusiveMax: c.ExclusiveMax,
+		MinLength:    c.MinLength,
+		MaxLength:    c.MaxLength,
+		EnumValues:   c.Enum,
 	}
 	if c.Pattern != "" {
 		pc.Regex = &c.Pattern

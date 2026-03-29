@@ -110,11 +110,9 @@ func (FieldType) EnumDescriptor() ([]byte, []int) {
 // Which constraints apply depends on the field's type — see FieldType docs.
 type FieldConstraints struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// For integer/number/duration: minimum allowed value.
-	// For string: minimum allowed length.
+	// For integer/number/duration: minimum allowed value (inclusive, >=).
 	Min *float64 `protobuf:"fixed64,1,opt,name=min,proto3,oneof" json:"min,omitempty"`
-	// For integer/number/duration: maximum allowed value.
-	// For string: maximum allowed length.
+	// For integer/number/duration: maximum allowed value (inclusive, <=).
 	Max *float64 `protobuf:"fixed64,2,opt,name=max,proto3,oneof" json:"max,omitempty"`
 	// Regular expression pattern the value must match.
 	// Applies to string-typed fields. Uses RE2 syntax.
@@ -124,7 +122,15 @@ type FieldConstraints struct {
 	EnumValues []string `protobuf:"bytes,4,rep,name=enum_values,json=enumValues,proto3" json:"enum_values,omitempty"`
 	// JSON Schema document for structural validation of json-typed fields.
 	// Encoded as a JSON string.
-	JsonSchema    *string `protobuf:"bytes,5,opt,name=json_schema,json=jsonSchema,proto3,oneof" json:"json_schema,omitempty"`
+	JsonSchema *string `protobuf:"bytes,5,opt,name=json_schema,json=jsonSchema,proto3,oneof" json:"json_schema,omitempty"`
+	// For integer/number/duration: exclusive minimum (strict, >).
+	ExclusiveMin *float64 `protobuf:"fixed64,6,opt,name=exclusive_min,json=exclusiveMin,proto3,oneof" json:"exclusive_min,omitempty"`
+	// For integer/number/duration: exclusive maximum (strict, <).
+	ExclusiveMax *float64 `protobuf:"fixed64,7,opt,name=exclusive_max,json=exclusiveMax,proto3,oneof" json:"exclusive_max,omitempty"`
+	// For string: minimum allowed length.
+	MinLength *int32 `protobuf:"varint,8,opt,name=min_length,json=minLength,proto3,oneof" json:"min_length,omitempty"`
+	// For string: maximum allowed length.
+	MaxLength     *int32 `protobuf:"varint,9,opt,name=max_length,json=maxLength,proto3,oneof" json:"max_length,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -192,6 +198,34 @@ func (x *FieldConstraints) GetJsonSchema() string {
 		return *x.JsonSchema
 	}
 	return ""
+}
+
+func (x *FieldConstraints) GetExclusiveMin() float64 {
+	if x != nil && x.ExclusiveMin != nil {
+		return *x.ExclusiveMin
+	}
+	return 0
+}
+
+func (x *FieldConstraints) GetExclusiveMax() float64 {
+	if x != nil && x.ExclusiveMax != nil {
+		return *x.ExclusiveMax
+	}
+	return 0
+}
+
+func (x *FieldConstraints) GetMinLength() int32 {
+	if x != nil && x.MinLength != nil {
+		return *x.MinLength
+	}
+	return 0
+}
+
+func (x *FieldConstraints) GetMaxLength() int32 {
+	if x != nil && x.MaxLength != nil {
+		return *x.MaxLength
+	}
+	return 0
 }
 
 // SchemaField defines a single field within a configuration schema.
@@ -1327,7 +1361,7 @@ var File_centralconfig_v1_types_proto protoreflect.FileDescriptor
 
 const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x1ccentralconfig/v1/types.proto\x12\x10centralconfig.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
+	"\x1ccentralconfig/v1/types.proto\x12\x10centralconfig.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaa\x03\n" +
 	"\x10FieldConstraints\x12\x15\n" +
 	"\x03min\x18\x01 \x01(\x01H\x00R\x03min\x88\x01\x01\x12\x15\n" +
 	"\x03max\x18\x02 \x01(\x01H\x01R\x03max\x88\x01\x01\x12\x19\n" +
@@ -1335,11 +1369,21 @@ const file_centralconfig_v1_types_proto_rawDesc = "" +
 	"\venum_values\x18\x04 \x03(\tR\n" +
 	"enumValues\x12$\n" +
 	"\vjson_schema\x18\x05 \x01(\tH\x03R\n" +
-	"jsonSchema\x88\x01\x01B\x06\n" +
+	"jsonSchema\x88\x01\x01\x12(\n" +
+	"\rexclusive_min\x18\x06 \x01(\x01H\x04R\fexclusiveMin\x88\x01\x01\x12(\n" +
+	"\rexclusive_max\x18\a \x01(\x01H\x05R\fexclusiveMax\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"min_length\x18\b \x01(\x05H\x06R\tminLength\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"max_length\x18\t \x01(\x05H\aR\tmaxLength\x88\x01\x01B\x06\n" +
 	"\x04_minB\x06\n" +
 	"\x04_maxB\b\n" +
 	"\x06_regexB\x0e\n" +
-	"\f_json_schema\"\xfd\x02\n" +
+	"\f_json_schemaB\x10\n" +
+	"\x0e_exclusive_minB\x10\n" +
+	"\x0e_exclusive_maxB\r\n" +
+	"\v_min_lengthB\r\n" +
+	"\v_max_length\"\xfd\x02\n" +
 	"\vSchemaField\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12/\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1b.centralconfig.v1.FieldTypeR\x04type\x12D\n" +

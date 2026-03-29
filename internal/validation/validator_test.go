@@ -100,8 +100,8 @@ func TestValidate_NumberMinMax(t *testing.T) {
 
 func TestValidate_StringMinMaxLength(t *testing.T) {
 	v := NewFieldValidator("name", pb.FieldType_FIELD_TYPE_STRING, false, &pb.FieldConstraints{
-		Min: ptr(float64(2)),
-		Max: ptr(float64(10)),
+		MinLength: ptr(int32(2)),
+		MaxLength: ptr(int32(10)),
 	})
 
 	require.NoError(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_StringValue{StringValue: "hello"}}))
@@ -149,6 +149,32 @@ func TestValidate_DurationMinMax(t *testing.T) {
 	require.NoError(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_DurationValue{DurationValue: durationpb.New(60_000_000_000)}})) // 60s
 	assert.Error(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_DurationValue{DurationValue: durationpb.New(500_000_000)}}))       // 0.5s
 	assert.Error(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_DurationValue{DurationValue: durationpb.New(7200_000_000_000)}}))  // 2h
+}
+
+// --- Exclusive min/max ---
+
+func TestValidate_ExclusiveMinMax(t *testing.T) {
+	v := NewFieldValidator("rate", pb.FieldType_FIELD_TYPE_NUMBER, false, &pb.FieldConstraints{
+		ExclusiveMin: ptr(float64(0)),
+		ExclusiveMax: ptr(float64(1)),
+	})
+
+	require.NoError(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_NumberValue{NumberValue: 0.5}}))
+	assert.Error(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_NumberValue{NumberValue: 0}}))        // not > 0
+	assert.Error(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_NumberValue{NumberValue: 1}}))        // not < 1
+	require.NoError(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_NumberValue{NumberValue: 0.001}})) // just above 0
+}
+
+func TestValidate_ExclusiveMinMax_Integer(t *testing.T) {
+	v := NewFieldValidator("level", pb.FieldType_FIELD_TYPE_INT, false, &pb.FieldConstraints{
+		ExclusiveMin: ptr(float64(0)),
+		ExclusiveMax: ptr(float64(10)),
+	})
+
+	require.NoError(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_IntegerValue{IntegerValue: 5}}))
+	assert.Error(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_IntegerValue{IntegerValue: 0}}))  // not > 0
+	assert.Error(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_IntegerValue{IntegerValue: 10}})) // not < 10
+	require.NoError(t, v.Validate(&pb.TypedValue{Kind: &pb.TypedValue_IntegerValue{IntegerValue: 1}}))
 }
 
 // --- URL validation ---

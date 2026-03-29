@@ -633,6 +633,10 @@ func (s *Service) importNewVersion(ctx context.Context, schema dbstore.Schema, l
 func (s *Service) createFields(ctx context.Context, versionID pgUUID, fields []*pb.SchemaField) ([]dbstore.SchemaField, error) {
 	result := make([]dbstore.SchemaField, 0, len(fields))
 	for _, f := range fields {
+		if err := validateFieldConstraints(f); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+		}
+
 		var constraints []byte
 		if f.Constraints != nil {
 			constraints, _ = json.Marshal(f.Constraints)

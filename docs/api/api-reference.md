@@ -219,11 +219,15 @@ Which constraints apply depends on the field&#39;s type — see FieldType docs.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| min | [double](#double) | optional | For integer/number/duration: minimum allowed value. For string: minimum allowed length. |
-| max | [double](#double) | optional | For integer/number/duration: maximum allowed value. For string: maximum allowed length. |
+| min | [double](#double) | optional | For integer/number/duration: minimum allowed value (inclusive, &gt;=). |
+| max | [double](#double) | optional | For integer/number/duration: maximum allowed value (inclusive, &lt;=). |
 | regex | [string](#string) | optional | Regular expression pattern the value must match. Applies to string-typed fields. Uses RE2 syntax. |
 | enum_values | [string](#string) | repeated | Allowed values. If non-empty, the value must be one of these. Applies to any field type. |
 | json_schema | [string](#string) | optional | JSON Schema document for structural validation of json-typed fields. Encoded as a JSON string. |
+| exclusive_min | [double](#double) | optional | For integer/number/duration: exclusive minimum (strict, &gt;). |
+| exclusive_max | [double](#double) | optional | For integer/number/duration: exclusive maximum (strict, &lt;). |
+| min_length | [int32](#int32) | optional | For string: minimum allowed length. |
+| max_length | [int32](#int32) | optional | For string: maximum allowed length. |
 
 
 

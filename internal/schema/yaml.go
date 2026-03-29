@@ -33,11 +33,15 @@ type SchemaFieldYAML struct {
 
 // ConstraintsYAML uses OAS-style naming for field constraints.
 type ConstraintsYAML struct {
-	Minimum    *float64 `yaml:"minimum,omitempty"`
-	Maximum    *float64 `yaml:"maximum,omitempty"`
-	Pattern    string   `yaml:"pattern,omitempty"`
-	Enum       []string `yaml:"enum,omitempty"`
-	JSONSchema string   `yaml:"json_schema,omitempty"`
+	Minimum          *float64 `yaml:"minimum,omitempty"`
+	Maximum          *float64 `yaml:"maximum,omitempty"`
+	ExclusiveMinimum *float64 `yaml:"exclusiveMinimum,omitempty"`
+	ExclusiveMaximum *float64 `yaml:"exclusiveMaximum,omitempty"`
+	MinLength        *int32   `yaml:"minLength,omitempty"`
+	MaxLength        *int32   `yaml:"maxLength,omitempty"`
+	Pattern          string   `yaml:"pattern,omitempty"`
+	Enum             []string `yaml:"enum,omitempty"`
+	JSONSchema       string   `yaml:"json_schema,omitempty"`
 }
 
 // --- Validation ---
@@ -158,9 +162,13 @@ func protoConstraintsToYAML(c *pb.FieldConstraints) *ConstraintsYAML {
 		return nil
 	}
 	yc := &ConstraintsYAML{
-		Minimum:    c.Min,
-		Maximum:    c.Max,
-		JSONSchema: c.GetJsonSchema(),
+		Minimum:          c.Min,
+		Maximum:          c.Max,
+		ExclusiveMinimum: c.ExclusiveMin,
+		ExclusiveMaximum: c.ExclusiveMax,
+		MinLength:        c.MinLength,
+		MaxLength:        c.MaxLength,
+		JSONSchema:       c.GetJsonSchema(),
 	}
 	if c.Regex != nil {
 		yc.Pattern = *c.Regex
@@ -169,7 +177,8 @@ func protoConstraintsToYAML(c *pb.FieldConstraints) *ConstraintsYAML {
 		yc.Enum = c.EnumValues
 	}
 	// Return nil if all fields are zero-valued.
-	if yc.Minimum == nil && yc.Maximum == nil && yc.Pattern == "" && len(yc.Enum) == 0 && yc.JSONSchema == "" {
+	if yc.Minimum == nil && yc.Maximum == nil && yc.ExclusiveMinimum == nil && yc.ExclusiveMaximum == nil &&
+		yc.MinLength == nil && yc.MaxLength == nil && yc.Pattern == "" && len(yc.Enum) == 0 && yc.JSONSchema == "" {
 		return nil
 	}
 	return yc
@@ -215,8 +224,12 @@ func yamlConstraintsToProto(yc *ConstraintsYAML) *pb.FieldConstraints {
 		return nil
 	}
 	c := &pb.FieldConstraints{
-		Min: yc.Minimum,
-		Max: yc.Maximum,
+		Min:          yc.Minimum,
+		Max:          yc.Maximum,
+		ExclusiveMin: yc.ExclusiveMinimum,
+		ExclusiveMax: yc.ExclusiveMaximum,
+		MinLength:    yc.MinLength,
+		MaxLength:    yc.MaxLength,
 	}
 	if yc.Pattern != "" {
 		c.Regex = &yc.Pattern

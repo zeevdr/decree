@@ -111,26 +111,37 @@ Constraints are optional validation rules checked on every write (including impo
 
 | Constraint | Applies to | Description |
 |-----------|-----------|-------------|
-| `minimum` | integer, number, duration | Minimum allowed value. For string: minimum length. |
-| `maximum` | integer, number, duration | Maximum allowed value. For string: maximum length. |
+| `minimum` | integer, number, duration | Minimum allowed value, inclusive (`>=`). |
+| `maximum` | integer, number, duration | Maximum allowed value, inclusive (`<=`). |
+| `exclusiveMinimum` | integer, number, duration | Exclusive minimum, strict (`>`). |
+| `exclusiveMaximum` | integer, number, duration | Exclusive maximum, strict (`<`). |
+| `minLength` | string | Minimum allowed string length. |
+| `maxLength` | string | Maximum allowed string length. |
 | `pattern` | string | Regular expression (RE2 syntax) the value must match. |
 | `enum` | any type | Allowed values. The value must be one of these. |
 | `json_schema` | json | JSON Schema document for structural validation. |
 
 URL fields are always validated for absolute URL format, even without explicit constraints.
 
+Constraints are validated at schema creation time — applying a constraint to an incompatible type (e.g. `minimum` on a string, `minLength` on an integer) is rejected.
+
 ### Constraint examples
 
 ```yaml
-# Integer range
+# Integer range (inclusive)
 constraints:
   minimum: 0
   maximum: 100
 
+# Number range (exclusive — value must be > 0 and < 1)
+constraints:
+  exclusiveMinimum: 0
+  exclusiveMaximum: 1
+
 # String length + pattern
 constraints:
-  minimum: 3          # min length
-  maximum: 50         # max length
+  minLength: 3
+  maxLength: 50
   pattern: '^[A-Z]+$' # uppercase only
 
 # Enum

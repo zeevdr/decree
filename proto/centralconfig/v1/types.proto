@@ -36,12 +36,10 @@ enum FieldType {
 // FieldConstraints defines validation rules for a schema field.
 // Which constraints apply depends on the field's type — see FieldType docs.
 message FieldConstraints {
-  // For integer/number/duration: minimum allowed value.
-  // For string: minimum allowed length.
+  // For integer/number/duration: minimum allowed value (inclusive, >=).
   optional double min = 1;
 
-  // For integer/number/duration: maximum allowed value.
-  // For string: maximum allowed length.
+  // For integer/number/duration: maximum allowed value (inclusive, <=).
   optional double max = 2;
 
   // Regular expression pattern the value must match.
@@ -55,6 +53,18 @@ message FieldConstraints {
   // JSON Schema document for structural validation of json-typed fields.
   // Encoded as a JSON string.
   optional string json_schema = 5;
+
+  // For integer/number/duration: exclusive minimum (strict, >).
+  optional double exclusive_min = 6;
+
+  // For integer/number/duration: exclusive maximum (strict, <).
+  optional double exclusive_max = 7;
+
+  // For string: minimum allowed length.
+  optional int32 min_length = 8;
+
+  // For string: maximum allowed length.
+  optional int32 max_length = 9;
 }
 
 // SchemaField defines a single field within a configuration schema.

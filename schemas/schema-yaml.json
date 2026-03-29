@@ -86,11 +86,29 @@
       "properties": {
         "minimum": {
           "type": "number",
-          "description": "For integer/number/duration: minimum allowed value. For string: minimum length."
+          "description": "For integer/number/duration: minimum allowed value (inclusive, >=)."
         },
         "maximum": {
           "type": "number",
-          "description": "For integer/number/duration: maximum allowed value. For string: maximum length."
+          "description": "For integer/number/duration: maximum allowed value (inclusive, <=)."
+        },
+        "exclusiveMinimum": {
+          "type": "number",
+          "description": "For integer/number/duration: exclusive minimum (strict, >)."
+        },
+        "exclusiveMaximum": {
+          "type": "number",
+          "description": "For integer/number/duration: exclusive maximum (strict, <)."
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "For string: minimum allowed length."
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "For string: maximum allowed length."
         },
         "pattern": {
           "type": "string",
