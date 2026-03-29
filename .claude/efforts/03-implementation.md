@@ -73,8 +73,13 @@ Core infrastructure — everything needed before implementing business logic.
 - [x] Benchmarks — unit + e2e benchmark framework
 - [x] README + CONTRIBUTING updated
 - [x] Modules separated — server, CLI, e2e, api, 3 SDKs (7 modules total)
-- [x] Documentation infrastructure — protoc-gen-doc (API), cobra/doc (CLI), MkDocs Material, make docs targets
-- [ ] CI (GitHub Actions)
+- [x] Documentation — all 14 pages written, proto/CLI docs generated, MkDocs Material site
+- [x] CI (GitHub Actions) — PR validation, release images to ghcr.io, docs deploy
+- [x] Version info — VersionService gRPC, ccs version, ldflags injection
+- [x] Config import modes — merge (default), replace, defaults
+- [x] Schema import --publish flag
+- [x] OAS constraint extensions — exclusiveMin/Max, minLength/maxLength, type validation
+- [x] xxHash checksums stored in DB
 - [ ] Helm chart
 
 ---

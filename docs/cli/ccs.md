@@ -31,5 +31,6 @@ Command-line tool for managing schemas, tenants, and configuration values in the
 * [ccs lock](ccs_lock.md)	 - Manage field locks
 * [ccs schema](ccs_schema.md)	 - Manage configuration schemas
 * [ccs tenant](ccs_tenant.md)	 - Manage tenants
+* [ccs version](ccs_version.md)	 - Print the CLI version
 * [ccs watch](ccs_watch.md)	 - Stream live config changes (like tail -f)
 

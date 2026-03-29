@@ -26,6 +26,7 @@ import (
 	"github.com/zeevdr/central-config-service/internal/storage"
 	"github.com/zeevdr/central-config-service/internal/telemetry"
 	"github.com/zeevdr/central-config-service/internal/validation"
+	"github.com/zeevdr/central-config-service/internal/version"
 )
 
 func main() {
@@ -38,6 +39,7 @@ func run() int {
 
 	// Logger — wrap with trace correlation if OTel is enabled.
 	logger := newLogger(cfg.LogLevel, otelCfg.Enabled)
+	logger.Info("starting central-config-service", "version", version.Version, "commit", version.Commit)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

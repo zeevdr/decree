@@ -96,6 +96,12 @@
   
     - [SchemaService](#centralconfig-v1-SchemaService)
   
+- [centralconfig/v1/version_service.proto](#centralconfig_v1_version_service-proto)
+    - [GetServerVersionRequest](#centralconfig-v1-GetServerVersionRequest)
+    - [GetServerVersionResponse](#centralconfig-v1-GetServerVersionResponse)
+  
+    - [VersionService](#centralconfig-v1-VersionService)
+  
 - [Scalar Value Types](#scalar-value-types)
 
 
@@ -1524,6 +1530,58 @@ Schema lifecycle.
 | ListFieldLocks | [ListFieldLocksRequest](#centralconfig-v1-ListFieldLocksRequest) | [ListFieldLocksResponse](#centralconfig-v1-ListFieldLocksResponse) | ListFieldLocks returns all active field locks for a tenant. |
 | ExportSchema | [ExportSchemaRequest](#centralconfig-v1-ExportSchemaRequest) | [ExportSchemaResponse](#centralconfig-v1-ExportSchemaResponse) | ExportSchema serializes a schema version to YAML. |
 | ImportSchema | [ImportSchemaRequest](#centralconfig-v1-ImportSchemaRequest) | [ImportSchemaResponse](#centralconfig-v1-ImportSchemaResponse) | ImportSchema creates a schema (or new version) from YAML. Full-replace semantics: the YAML defines the complete field set. Returns AlreadyExists if the imported fields are identical to the latest version. |
+
+ 
+
+
+
+<a name="centralconfig_v1_version_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## centralconfig/v1/version_service.proto
+
+
+
+<a name="centralconfig-v1-GetServerVersionRequest"></a>
+
+### GetServerVersionRequest
+
+
+
+
+
+
+
+<a name="centralconfig-v1-GetServerVersionResponse"></a>
+
+### GetServerVersionResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| version | [string](#string) |  | Semantic version string (e.g. &#34;1.2.3&#34; or &#34;dev&#34;). |
+| commit | [string](#string) |  | Git commit hash. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="centralconfig-v1-VersionService"></a>
+
+### VersionService
+VersionService provides server version information.
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| GetServerVersion | [GetServerVersionRequest](#centralconfig-v1-GetServerVersionRequest) | [GetServerVersionResponse](#centralconfig-v1-GetServerVersionResponse) | GetServerVersion returns the server&#39;s build version and commit hash. |
 
  
 
