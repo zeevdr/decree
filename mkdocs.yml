@@ -83,6 +83,8 @@ nav:
           - ccs audit query: cli/ccs_audit_query.md
           - ccs audit usage: cli/ccs_audit_usage.md
           - ccs audit unused: cli/ccs_audit_unused.md
+  - Use Cases:
+      - Config as Code: usecases/config-as-code.md
   - Server:
       - Configuration: server/configuration.md
       - Deployment: server/deployment.md
