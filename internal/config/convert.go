@@ -1,9 +1,6 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -135,15 +132,6 @@ func stringToTypedValue(s *string, ft domain.FieldType) *pb.TypedValue {
 	}
 }
 
-// typedValueChecksum computes a checksum for a TypedValue by serializing to string first.
-func typedValueChecksum(tv *pb.TypedValue) string { //nolint:unused // used in Phase 2 validation
-	s := typedValueToString(tv)
-	if s == nil {
-		return computeChecksum("")
-	}
-	return computeChecksum(*s)
-}
-
 // typedValueToDisplayString returns a human-readable string for a TypedValue (for audit/events).
 func typedValueToDisplayString(tv *pb.TypedValue) string {
 	s := typedValueToString(tv)
@@ -151,55 +139,4 @@ func typedValueToDisplayString(tv *pb.TypedValue) string {
 		return ""
 	}
 	return *s
-}
-
-// validateTypedValueType checks that a TypedValue matches the expected field type.
-func validateTypedValueType(tv *pb.TypedValue, expected domain.FieldType) error { //nolint:unused // used in Phase 2 validation
-	if tv == nil {
-		return nil // null is valid for any type (nullable check is separate)
-	}
-	switch expected {
-	case domain.FieldTypeInteger:
-		if _, ok := tv.Kind.(*pb.TypedValue_IntegerValue); !ok {
-			return fmt.Errorf("expected integer value")
-		}
-	case domain.FieldTypeNumber:
-		if _, ok := tv.Kind.(*pb.TypedValue_NumberValue); !ok {
-			return fmt.Errorf("expected number value")
-		}
-	case domain.FieldTypeString:
-		if _, ok := tv.Kind.(*pb.TypedValue_StringValue); !ok {
-			return fmt.Errorf("expected string value")
-		}
-	case domain.FieldTypeBool:
-		if _, ok := tv.Kind.(*pb.TypedValue_BoolValue); !ok {
-			return fmt.Errorf("expected bool value")
-		}
-	case domain.FieldTypeTime:
-		if _, ok := tv.Kind.(*pb.TypedValue_TimeValue); !ok {
-			return fmt.Errorf("expected time value")
-		}
-	case domain.FieldTypeDuration:
-		if _, ok := tv.Kind.(*pb.TypedValue_DurationValue); !ok {
-			return fmt.Errorf("expected duration value")
-		}
-	case domain.FieldTypeURL:
-		if v, ok := tv.Kind.(*pb.TypedValue_UrlValue); ok {
-			u, err := url.Parse(v.UrlValue)
-			if err != nil || !u.IsAbs() {
-				return fmt.Errorf("invalid absolute URL")
-			}
-		} else {
-			return fmt.Errorf("expected url value")
-		}
-	case domain.FieldTypeJSON:
-		if v, ok := tv.Kind.(*pb.TypedValue_JsonValue); ok {
-			if !json.Valid([]byte(v.JsonValue)) {
-				return fmt.Errorf("invalid JSON")
-			}
-		} else {
-			return fmt.Errorf("expected json value")
-		}
-	}
-	return nil
 }

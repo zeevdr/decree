@@ -16,28 +16,30 @@ Raise test coverage across all modules. The coverage ratchet prevents regression
 | sdk/tools | 95.2% | 95.2% | maintain | done |
 | sdk/configwatcher | 61.6% | 90.9% | 80% | exceeded |
 | sdk/adminclient | 36.3% | 89.3% | 55% | exceeded |
-| sdk/configclient | 58.0% | 62.3% | 75% | in progress |
+| sdk/configclient | 58.0% | 81.6% | 75% | exceeded |
 | cmd/decree | 57.8% | 57.8% | 65% | not started |
-| internal | 41.1% | 46.4% | 65% | in progress |
+| internal | 41.1% | 43.5% | 65% | in progress |
 
 ## Completed
 
-### Tier 1 — Quick Wins
+### Round 1 (PR #2)
 - [x] internal/telemetry — ConfigFromEnv, envBool, AnyMetrics
 - [x] sdk/configclient — With* builders, withAuth metadata/bearer paths
 - [x] sdk/configwatcher — New, With* options, typed field registration, parsers, typedValueToString, Value.close, channel overflow
-
-### Tier 2 — Services
 - [x] internal/audit — QueryWriteLog, GetFieldUsage, GetTenantUsage, GetUnusedFields, UUID helpers, proto conversion
-- [x] sdk/adminclient — With* builders, withAuth, all proto conversion helpers
+- [x] sdk/adminclient — all CRUD, locks, audit, pagination, error mapping, ServiceNotConfigured
+- [x] internal/server — New, Serve, GracefulStop, IsServiceEnabled
 
-### Tier 3 — Harder
-- [x] internal/server — New, Serve, GracefulStop, IsServiceEnabled, SetServiceHealthy
-- [x] sdk/adminclient — schema CRUD, tenant CRUD, locks, audit queries, usage stats, import/export, pagination, error mapping, all ServiceNotConfigured paths
+### Round 2 (current)
+- [x] internal/telemetry — CacheMetrics, ConfigMetrics, SchemaMetrics nil-safe + enabled paths, StartDBPoolMetrics disabled
+- [x] sdk/configclient — SetTime, SetDuration, SetTyped, GetTime, GetDuration, GetFields, GetBoolNullable, derefString, typedValueToString
+- [x] internal/config/store_pg — all *FromDB mapping functions
+- [x] internal/schema/store_pg — all *FromDB mapping functions
+- [x] internal/audit/store_pg — all *FromDB mapping functions
+- [x] Removed dead code: typedValueChecksum, validateTypedValueType (validation package handles this)
 
 ## Remaining
 
 ### Still needed to reach targets
-- [ ] sdk/configclient (62.3→75%) — SetTime, SetDuration setters, more error path coverage
 - [ ] cmd/decree (57.8→65%) — CLI handlers with mocked gRPC
-- [ ] internal (46.4→65%) — cache (mock Redis), pubsub (mock Redis), expand config service tests
+- [ ] internal (43.5→65%) — cache (needs Redis mock), pubsub (needs Redis mock), expand config/schema service tests
