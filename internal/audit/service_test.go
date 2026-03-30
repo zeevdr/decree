@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -15,40 +14,34 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "github.com/zeevdr/decree/api/centralconfig/v1"
-	"github.com/zeevdr/decree/internal/storage/dbstore"
+	"github.com/zeevdr/decree/internal/storage/domain"
 )
 
 type mockStore struct{ mock.Mock }
 
-func (m *mockStore) QueryAuditWriteLog(ctx context.Context, arg dbstore.QueryAuditWriteLogParams) ([]dbstore.AuditWriteLog, error) {
+func (m *mockStore) QueryAuditWriteLog(ctx context.Context, arg QueryWriteLogParams) ([]domain.AuditWriteLog, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]dbstore.AuditWriteLog), args.Error(1)
+	return args.Get(0).([]domain.AuditWriteLog), args.Error(1)
 }
 
-func (m *mockStore) GetFieldUsage(ctx context.Context, arg dbstore.GetFieldUsageParams) ([]dbstore.UsageStat, error) {
+func (m *mockStore) GetFieldUsage(ctx context.Context, arg GetFieldUsageParams) ([]domain.UsageStat, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]dbstore.UsageStat), args.Error(1)
+	return args.Get(0).([]domain.UsageStat), args.Error(1)
 }
 
-func (m *mockStore) GetTenantUsage(ctx context.Context, arg dbstore.GetTenantUsageParams) ([]dbstore.GetTenantUsageRow, error) {
+func (m *mockStore) GetTenantUsage(ctx context.Context, arg GetTenantUsageParams) ([]domain.TenantUsageRow, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).([]dbstore.GetTenantUsageRow), args.Error(1)
+	return args.Get(0).([]domain.TenantUsageRow), args.Error(1)
 }
 
-func (m *mockStore) GetUnusedFields(ctx context.Context, arg dbstore.GetUnusedFieldsParams) ([]string, error) {
+func (m *mockStore) GetUnusedFields(ctx context.Context, arg GetUnusedFieldsParams) ([]string, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).([]string), args.Error(1)
 }
 
-func (m *mockStore) UpsertUsageStats(ctx context.Context, arg dbstore.UpsertUsageStatsParams) error {
+func (m *mockStore) UpsertUsageStats(ctx context.Context, arg UpsertUsageStatsParams) error {
 	args := m.Called(ctx, arg)
 	return args.Error(0)
-}
-
-func testUUID(s string) pgtype.UUID {
-	var id pgtype.UUID
-	_ = id.Scan(s)
-	return id
 }
 
 func newTestService() (*Service, *mockStore) {
@@ -63,13 +56,13 @@ func TestQueryWriteLog_Success(t *testing.T) {
 	svc, store := newTestService()
 	ctx := context.Background()
 
-	store.On("QueryAuditWriteLog", ctx, mock.Anything).Return([]dbstore.AuditWriteLog{
+	store.On("QueryAuditWriteLog", ctx, mock.Anything).Return([]domain.AuditWriteLog{
 		{
-			ID:        testUUID("11111111-1111-1111-1111-111111111111"),
-			TenantID:  testUUID("22222222-2222-2222-2222-222222222222"),
+			ID:        "11111111-1111-1111-1111-111111111111",
+			TenantID:  "22222222-2222-2222-2222-222222222222",
 			Actor:     "admin",
 			Action:    "set_field",
-			CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			CreatedAt: time.Now(),
 		},
 	}, nil)
 
@@ -86,7 +79,7 @@ func TestQueryWriteLog_WithFilters(t *testing.T) {
 	tenantID := "22222222-2222-2222-2222-222222222222"
 	actor := "admin"
 	fieldPath := "app.fee"
-	store.On("QueryAuditWriteLog", ctx, mock.Anything).Return([]dbstore.AuditWriteLog{}, nil)
+	store.On("QueryAuditWriteLog", ctx, mock.Anything).Return([]domain.AuditWriteLog{}, nil)
 
 	_, err := svc.QueryWriteLog(ctx, &pb.QueryWriteLogRequest{
 		TenantId:  &tenantID,
@@ -112,9 +105,9 @@ func TestQueryWriteLog_DefaultPageSize(t *testing.T) {
 	svc, store := newTestService()
 	ctx := context.Background()
 
-	store.On("QueryAuditWriteLog", ctx, mock.MatchedBy(func(p dbstore.QueryAuditWriteLogParams) bool {
+	store.On("QueryAuditWriteLog", ctx, mock.MatchedBy(func(p QueryWriteLogParams) bool {
 		return p.Limit == 50
-	})).Return([]dbstore.AuditWriteLog{}, nil)
+	})).Return([]domain.AuditWriteLog{}, nil)
 
 	_, err := svc.QueryWriteLog(ctx, &pb.QueryWriteLogRequest{})
 	require.NoError(t, err)
@@ -127,8 +120,9 @@ func TestGetFieldUsage_Success(t *testing.T) {
 	ctx := context.Background()
 
 	lastReadBy := "reader"
-	store.On("GetFieldUsage", ctx, mock.Anything).Return([]dbstore.UsageStat{
-		{ReadCount: 10, LastReadBy: &lastReadBy, LastReadAt: pgtype.Timestamptz{Time: time.Now(), Valid: true}},
+	now := time.Now()
+	store.On("GetFieldUsage", ctx, mock.Anything).Return([]domain.UsageStat{
+		{ReadCount: 10, LastReadBy: &lastReadBy, LastReadAt: &now},
 		{ReadCount: 5},
 	}, nil)
 
@@ -153,7 +147,7 @@ func TestGetTenantUsage_Success(t *testing.T) {
 	svc, store := newTestService()
 	ctx := context.Background()
 
-	store.On("GetTenantUsage", ctx, mock.Anything).Return([]dbstore.GetTenantUsageRow{
+	store.On("GetTenantUsage", ctx, mock.Anything).Return([]domain.TenantUsageRow{
 		{FieldPath: "app.fee", ReadCount: 10},
 		{FieldPath: "app.name", ReadCount: 3},
 	}, nil)
@@ -198,20 +192,10 @@ func TestGetUnusedFields_InvalidTenantID(t *testing.T) {
 
 // --- Helpers ---
 
-func TestParseUUID(t *testing.T) {
-	id, err := parseUUID("11111111-1111-1111-1111-111111111111")
-	require.NoError(t, err)
-	assert.True(t, id.Valid)
-
-	_, err = parseUUID("not-a-uuid")
-	assert.Error(t, err)
-}
-
-func TestUUIDToString(t *testing.T) {
-	id := testUUID("11111111-1111-1111-1111-111111111111")
-	assert.Equal(t, "11111111-1111-1111-1111-111111111111", uuidToString(id))
-
-	assert.Equal(t, "", uuidToString(pgtype.UUID{}))
+func TestIsValidUUID(t *testing.T) {
+	assert.True(t, isValidUUID("11111111-1111-1111-1111-111111111111"))
+	assert.False(t, isValidUUID("not-a-uuid"))
+	assert.False(t, isValidUUID(""))
 }
 
 func TestAuditEntryToProto(t *testing.T) {
@@ -219,16 +203,16 @@ func TestAuditEntryToProto(t *testing.T) {
 	oldVal := "0.01"
 	newVal := "0.02"
 	version := int32(3)
-	e := dbstore.AuditWriteLog{
-		ID:            testUUID("11111111-1111-1111-1111-111111111111"),
-		TenantID:      testUUID("22222222-2222-2222-2222-222222222222"),
+	e := domain.AuditWriteLog{
+		ID:            "11111111-1111-1111-1111-111111111111",
+		TenantID:      "22222222-2222-2222-2222-222222222222",
 		Actor:         "admin",
 		Action:        "set_field",
 		FieldPath:     &fieldPath,
 		OldValue:      &oldVal,
 		NewValue:      &newVal,
 		ConfigVersion: &version,
-		CreatedAt:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		CreatedAt:     time.Now(),
 	}
 
 	pb := auditEntryToProto(e)
