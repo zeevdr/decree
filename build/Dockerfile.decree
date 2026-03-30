@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -o /bin/decree ./cmd/decree
+    cd cmd/decree && CGO_ENABLED=0 go build -o /bin/decree .
 
 # Runtime stage
 FROM gcr.io/distroless/static-debian12:nonroot
