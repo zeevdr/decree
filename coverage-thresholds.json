@@ -1,8 +1,8 @@
 {
   "cmd/decree": 57.8,
-  "internal": 41.2,
+  "internal": 43.5,
   "sdk/adminclient": 89.3,
-  "sdk/configclient": 62.3,
+  "sdk/configclient": 81.6,
   "sdk/configwatcher": 90.9,
   "sdk/tools": 95.2
 }
