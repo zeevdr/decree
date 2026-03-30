@@ -1,10 +1,16 @@
-# OpenDecree
+<p align="center">
+  <img src="assets/logo.png" alt="OpenDecree" width="150">
+</p>
 
-[![CI](https://github.com/zeevdr/decree/actions/workflows/ci.yml/badge.svg)](https://github.com/zeevdr/decree/actions/workflows/ci.yml)
-[![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go)](https://go.dev/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+<h1 align="center">OpenDecree</h1>
 
-Schema-driven business configuration management for multi-tenant services.
+<p align="center">
+  <a href="https://github.com/zeevdr/decree/actions/workflows/ci.yml"><img src="https://github.com/zeevdr/decree/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.24-00ADD8?logo=go" alt="Go"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+</p>
+
+<p align="center">Schema-driven business configuration management for multi-tenant services.</p>
 
 ## What is this?
 
