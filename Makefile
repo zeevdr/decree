@@ -1,6 +1,6 @@
 BINARY_NAME := decree-server
 BUILD_DIR := bin
-TOOLS_IMAGE := central-config-tools
+TOOLS_IMAGE := decree-tools
 TOOLS_SENTINEL := .tools-image-built
 DOCKER_RUN_TOOLS := docker run --rm -u $(shell id -u):$(shell id -g) -e HOME=/tmp -v $(CURDIR):/workspace -w /workspace $(TOOLS_IMAGE)
 MKDOCS_IMAGE := $(MKDOCS_IMAGE):9.7.6
