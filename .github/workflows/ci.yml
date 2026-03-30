@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
@@ -21,6 +22,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.24"
+          cache: false
 
       - name: Go lint
         uses: golangci/golangci-lint-action@v9
@@ -42,21 +44,22 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.24"
+          cache: false
 
       - name: Unit tests
         run: go test ./internal/... -race -count=1
 
       - name: SDK tests
         run: |
-          go test ./sdk/configclient/... -count=1
-          go test ./sdk/adminclient/... -count=1
-          go test ./sdk/configwatcher/... -count=1
+          cd sdk/configclient && go test ./... -count=1 && cd ../..
+          cd sdk/adminclient && go test ./... -count=1 && cd ../..
+          cd sdk/configwatcher && go test ./... -count=1 && cd ../..
 
       - name: CLI tests
-        run: go test ./cmd/decree/... -count=1
+        run: cd cmd/decree && go test ./... -count=1
 
       - name: Tools tests
-        run: go test ./sdk/tools/... -count=1
+        run: cd sdk/tools && go test ./... -count=1
 
   build:
     name: Build
@@ -67,12 +70,13 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.24"
+          cache: false
 
       - name: Build server
-        run: go build -o bin/decree ./cmd/server
+        run: go build -o bin/decree-server ./cmd/server
 
       - name: Build CLI
-        run: go build -o bin/decree ./cmd/decree
+        run: cd cmd/decree && go build -o ../../bin/decree .
 
   docs:
     name: Docs check
@@ -83,6 +87,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.24"
+          cache: false
 
       - name: Build tools image
         run: make tools
@@ -107,6 +112,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.24"
+          cache: false
 
       - name: Run E2E tests
         run: make e2e

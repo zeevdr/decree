@@ -66,6 +66,8 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 		return nil, err
 	}
 
+	types := s.fieldTypeMap(ctx, tenantID, req.TenantId)
+
 	// If descriptions not requested, try cache.
 	if !req.IncludeDescriptions {
 		if cached, err := s.cache.Get(ctx, req.TenantId, version); err == nil && cached != nil {
@@ -75,7 +77,7 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 				v := val
 				values = append(values, &pb.ConfigValue{
 					FieldPath: path,
-					Value:     stringToTypedValue(&v, pb.FieldType_FIELD_TYPE_STRING),
+					Value:     stringToTypedValue(&v, lookupFieldType(types, path)),
 					Checksum:  computeChecksum(val),
 				})
 			}
@@ -100,7 +102,7 @@ func (s *Service) GetConfig(ctx context.Context, req *pb.GetConfigRequest) (*pb.
 	for _, row := range rows {
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
-			Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
+			Value:     stringToTypedValue(row.Value, lookupFieldType(types, row.FieldPath)),
 			Checksum:  derefString(row.Checksum),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
@@ -145,9 +147,10 @@ func (s *Service) GetField(ctx context.Context, req *pb.GetFieldRequest) (*pb.Ge
 		return nil, status.Error(codes.Internal, "failed to get field")
 	}
 
+	types := s.fieldTypeMap(ctx, tenantID, req.TenantId)
 	cv := &pb.ConfigValue{
 		FieldPath: row.FieldPath,
-		Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
+		Value:     stringToTypedValue(row.Value, lookupFieldType(types, row.FieldPath)),
 		Checksum:  derefString(row.Checksum),
 	}
 	if req.IncludeDescription && row.Description != nil {
@@ -168,6 +171,7 @@ func (s *Service) GetFields(ctx context.Context, req *pb.GetFieldsRequest) (*pb.
 		return nil, err
 	}
 
+	types := s.fieldTypeMap(ctx, tenantID, req.TenantId)
 	values := make([]*pb.ConfigValue, 0, len(req.FieldPaths))
 	for _, path := range req.FieldPaths {
 		row, err := s.store.GetConfigValueAtVersion(ctx, dbstore.GetConfigValueAtVersionParams{
@@ -183,7 +187,7 @@ func (s *Service) GetFields(ctx context.Context, req *pb.GetFieldsRequest) (*pb.
 		}
 		cv := &pb.ConfigValue{
 			FieldPath: row.FieldPath,
-			Value:     stringToTypedValue(row.Value, pb.FieldType_FIELD_TYPE_STRING),
+			Value:     stringToTypedValue(row.Value, lookupFieldType(types, row.FieldPath)),
 			Checksum:  derefString(row.Checksum),
 		}
 		if req.IncludeDescriptions && row.Description != nil {
@@ -516,12 +520,18 @@ func (s *Service) RollbackToVersion(ctx context.Context, req *pb.RollbackToVersi
 func (s *Service) Subscribe(req *pb.SubscribeRequest, stream grpc.ServerStreamingServer[pb.SubscribeResponse]) error {
 	ctx := stream.Context()
 
+	tenantID, err := parseUUID(req.TenantId)
+	if err != nil {
+		return status.Error(codes.InvalidArgument, "invalid tenant id")
+	}
+
 	events, cancel, err := s.subscriber.Subscribe(ctx, req.TenantId)
 	if err != nil {
 		return status.Error(codes.Internal, "failed to subscribe")
 	}
 	defer cancel()
 
+	types := s.fieldTypeMap(ctx, tenantID, req.TenantId)
 	filterPaths := make(map[string]struct{}, len(req.FieldPaths))
 	for _, p := range req.FieldPaths {
 		filterPaths[p] = struct{}{}
@@ -548,8 +558,8 @@ func (s *Service) Subscribe(req *pb.SubscribeRequest, stream grpc.ServerStreamin
 					TenantId:  event.TenantID,
 					Version:   event.Version,
 					FieldPath: event.FieldPath,
-					OldValue:  stringToTypedValue(ptrString(event.OldValue), pb.FieldType_FIELD_TYPE_STRING),
-					NewValue:  stringToTypedValue(strPtr(event.NewValue), pb.FieldType_FIELD_TYPE_STRING),
+					OldValue:  stringToTypedValue(ptrString(event.OldValue), lookupFieldType(types, event.FieldPath)),
+					NewValue:  stringToTypedValue(strPtr(event.NewValue), lookupFieldType(types, event.FieldPath)),
 					ChangedBy: event.ChangedBy,
 					ChangedAt: timestamppb.New(event.ChangedAt),
 				},
@@ -936,9 +946,39 @@ func (s *Service) validateField(ctx context.Context, tenantID pgtype.UUID, tenan
 		return status.Errorf(codes.InvalidArgument, "field %s is not defined in the schema", fieldPath)
 	}
 	if err := v.Validate(value); err != nil {
+		s.logger.DebugContext(ctx, "field validation failed", "field", fieldPath, "error", err)
 		return status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	return nil
+}
+
+// fieldTypeMap returns a map of field path → proto field type for a tenant's schema.
+// Returns nil if validators are not configured (all fields treated as STRING).
+func (s *Service) fieldTypeMap(ctx context.Context, tenantID pgtype.UUID, tenantIDStr string) map[string]pb.FieldType {
+	if s.validators == nil {
+		return nil
+	}
+	validators, err := s.validators.GetValidators(ctx, tenantID, tenantIDStr)
+	if err != nil {
+		s.logger.DebugContext(ctx, "failed to get validators for field type lookup", "error", err)
+		return nil
+	}
+	m := make(map[string]pb.FieldType, len(validators))
+	for path, v := range validators {
+		m[path] = v.FieldType()
+	}
+	s.logger.DebugContext(ctx, "resolved field types for tenant", "tenant", tenantIDStr, "fields", len(m))
+	return m
+}
+
+// lookupFieldType returns the field type from a type map, defaulting to STRING.
+func lookupFieldType(types map[string]pb.FieldType, fieldPath string) pb.FieldType {
+	if types != nil {
+		if ft, ok := types[fieldPath]; ok {
+			return ft
+		}
+	}
+	return pb.FieldType_FIELD_TYPE_STRING
 }
 
 func (s *Service) publishChange(ctx context.Context, tenantID string, version int32, fieldPath, oldValue, newValue, actor string) {

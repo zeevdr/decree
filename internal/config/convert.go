@@ -122,7 +122,7 @@ func typedValueToString(tv *pb.TypedValue) *string {
 
 // stringToTypedValue converts a DB string value to a TypedValue using the field type.
 // Returns nil for a nil (null) string.
-func stringToTypedValue(s *string, ft pb.FieldType) *pb.TypedValue { //nolint:unparam // ft will vary once field-type-aware reads are added
+func stringToTypedValue(s *string, ft pb.FieldType) *pb.TypedValue {
 	if s == nil {
 		return nil
 	}

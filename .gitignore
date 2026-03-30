@@ -6,6 +6,8 @@
 .vscode/
 
 # Go
+go.work
+go.work.sum
 bin/
 dist/
 *.exe

@@ -21,6 +21,11 @@ type FieldValidator struct {
 
 type checkFunc func(tv *pb.TypedValue) error
 
+// FieldType returns the proto field type for this validator.
+func (v *FieldValidator) FieldType() pb.FieldType {
+	return v.fieldType
+}
+
 // Validate checks a TypedValue against this field's constraints.
 // Returns nil if the value is valid. Returns an error describing the first violation.
 func (v *FieldValidator) Validate(tv *pb.TypedValue) error {
