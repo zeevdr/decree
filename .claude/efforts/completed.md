@@ -55,3 +55,23 @@ In-memory backends for all pluggable interfaces: ConfigCache, Publisher/Subscrib
 ## Go Public (effort 13 — partial)
 
 Completed: secret scan (clean), LICENSE verified, README review + badges, module paths confirmed, git history cleaned, GitHub settings, repo flipped to public, v0.1.0 tagged (all submodules), branch protection, issue templates, SECURITY.md, Code of Conduct, GitHub Discussions, CI fixed. Remaining: pre-launch items (see effort 13).
+
+## REST/HTTP Gateway (effort 16)
+
+grpc-gateway embedded in server binary. google.api.http annotations on all 32 RPCs. Swagger UI at /docs. OpenAPI spec generated and embedded. Opt-in via HTTP_PORT env var. Auth headers forwarded from HTTP to gRPC metadata. 94.9% server coverage.
+
+## Schema YAML Enrichment (effort 20)
+
+OAS-inspired metadata: schema-level info block (title, author, contact, labels), field-level metadata (title, example, examples, externalDocs, tags, format, readOnly, writeOnce, sensitive). 4 new proto messages, all optional, backward compatible.
+
+## Additional Items (v0.3.0 cycle)
+
+- **BSR proto publishing** — buf.build/opendecree/decree, auto-push on release tags
+- **In-memory storage wiring** — STORAGE_BACKEND=memory, zero-dep evaluation mode, validator store adapter
+- **GitHub Project** — roadmap board with issues from efforts, CI auto-add workflow
+- **Shell completion** — bash/zsh/fish/powershell via cobra, flag value hints for --output/--role/--mode
+- **Helm chart** — deploy/helm/decree with full env var support, secrets, ingress, OTel, health probes
+- **Goreleaser** — cross-platform binaries (server: linux/mac, CLI: linux/mac/windows, amd64/arm64)
+- **Man pages** — 43 pages via cobra/doc, Long descriptions for parent commands
+- **Docker layer caching** — GHA cache for main.yml and release.yml image builds
+- **configclient retry** — generic retry[T] with exponential backoff + jitter, opt-in via WithRetry()

@@ -8,11 +8,9 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 ## Infrastructure
 
-- [x] ~~**Helm chart**~~ — done: deploy/helm/decree with full env var support, secrets, ingress, OTel
-- [x] ~~**Wire in-memory storage**~~ — done: `STORAGE_BACKEND=memory` in cmd/server
 - [ ] **Usage stats recording** — async batched read tracking (deferred from AuditService)
-- [x] ~~**Docker layer caching**~~ — done: GHA cache in main.yml + release.yml image builds
 - [ ] **Internal coverage** — cache/pubsub need Redis mocks to reach 65%+
+- [ ] **Cursor-based pagination** — ListSchemas/ListTenants/ListVersions (TODO in schema/service.go)
 
 ## Contrib Integrations
 
@@ -22,7 +20,6 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 ## SDK Enhancements
 
-- [x] ~~**Retry/backoff on configclient**~~ — done: generic retry[T] with exponential backoff + jitter, opt-in via WithRetry()
 - [ ] **configwatcher write-through** — allow writes via watcher that optimistically update local values
 - [ ] **configwatcher field groups** — register a struct and auto-map fields by tag
 - [ ] **SDK code generation** — generate typed config structs from schema definitions
@@ -35,11 +32,8 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 - [ ] **Multi-environment promotion** — promote config from dev → staging → prod with approval workflow
 - [ ] **Config templates** — default config values defined at schema level, applied on tenant creation
 
-## CLI Phase 4 — Polish
+## CLI
 
-- [x] ~~**Shell completion**~~ — done: bash, zsh, fish, powershell (cobra built-in + flag completions)
-- [x] ~~**Man page generation**~~ — done: 43 man pages via cobra/doc, committed to docs/man/
-- [x] ~~**Goreleaser**~~ — done: builds server + CLI for linux/mac/windows (amd64/arm64)
 - [ ] **Homebrew formula** — tap repo with goreleaser-generated formula
 
 ## Observability
