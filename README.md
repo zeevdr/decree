@@ -123,9 +123,32 @@ cd decree
 # Start the full stack (PostgreSQL + Redis + migrations + service)
 docker compose up -d --wait service
 
-# The gRPC service is now available at localhost:9090
+# gRPC at localhost:9090, REST/JSON at localhost:8080
 # No JWT required — metadata auth is the default
 ```
+
+### REST API
+
+The entire gRPC API is also available as REST/JSON (via grpc-gateway). Set `HTTP_PORT` to enable:
+
+```bash
+# Version check
+curl http://localhost:8080/v1/version
+
+# List schemas
+curl -H "x-subject: admin" http://localhost:8080/v1/schemas
+
+# Create a schema
+curl -X POST http://localhost:8080/v1/schemas \
+  -H "Content-Type: application/json" \
+  -H "x-subject: admin" \
+  -d '{"name":"payments","fields":[{"path":"fee","type":7}]}'
+
+# Get config
+curl -H "x-subject: admin" http://localhost:8080/v1/tenants/{id}/config
+```
+
+OpenAPI spec: [`docs/api/openapi.swagger.json`](docs/api/openapi.swagger.json)
 
 ### Using the CLI
 
@@ -169,6 +192,7 @@ Single binary exposing three gRPC services. Deploy with `ENABLE_SERVICES` to con
 | Variable | Description | Default |
 |----------|------------|---------|
 | `GRPC_PORT` | gRPC listen port | `9090` |
+| `HTTP_PORT` | REST/JSON gateway port (disabled if empty) | disabled |
 | `DB_WRITE_URL` | PostgreSQL primary connection string | required |
 | `DB_READ_URL` | PostgreSQL read replica connection string | `DB_WRITE_URL` |
 | `REDIS_URL` | Redis connection string | required |

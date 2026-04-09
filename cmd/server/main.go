@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -28,6 +30,9 @@ import (
 	"github.com/zeevdr/decree/internal/validation"
 	"github.com/zeevdr/decree/internal/version"
 )
+
+//go:embed openapi.json
+var openAPISpec []byte
 
 func main() {
 	os.Exit(run())
@@ -170,11 +175,31 @@ func run() int {
 		logger.InfoContext(ctx, "audit service enabled")
 	}
 
+	// Optional HTTP gateway (REST/JSON proxy to gRPC).
+	var gw *server.Gateway
+	if cfg.HTTPPort != "" {
+		gw, err = server.NewGateway(ctx, server.GatewayConfig{
+			HTTPPort:    cfg.HTTPPort,
+			GRPCAddr:    fmt.Sprintf("localhost:%s", cfg.GRPCPort),
+			Logger:      logger,
+			OpenAPISpec: openAPISpec,
+		})
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to create HTTP gateway", "error", err)
+			return 1
+		}
+	}
+
 	// Start server in background.
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 2)
 	go func() {
 		errCh <- srv.Serve(ctx)
 	}()
+	if gw != nil {
+		go func() {
+			errCh <- gw.Serve(ctx)
+		}()
+	}
 
 	// Wait for shutdown signal.
 	sigCh := make(chan os.Signal, 1)
@@ -188,6 +213,9 @@ func run() int {
 	}
 
 	cancel()
+	if gw != nil {
+		gw.Shutdown(ctx)
+	}
 	srv.GracefulStop(ctx)
 	logger.InfoContext(ctx, "decree stopped")
 	return 0
@@ -195,6 +223,7 @@ func run() int {
 
 type serverConfig struct {
 	GRPCPort       string
+	HTTPPort       string
 	DBWriteURL     string
 	DBReadURL      string
 	RedisURL       string
@@ -211,6 +240,7 @@ func loadConfig() serverConfig {
 
 	return serverConfig{
 		GRPCPort:       getEnv("GRPC_PORT", "9090"),
+		HTTPPort:       getEnv("HTTP_PORT", ""),
 		DBWriteURL:     dbWriteURL,
 		DBReadURL:      dbReadURL,
 		RedisURL:       getEnv("REDIS_URL", ""),
