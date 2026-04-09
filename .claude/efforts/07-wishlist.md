@@ -22,7 +22,7 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 ## SDK Enhancements
 
-- [ ] **Retry/backoff on configclient** — automatic retry with backoff for transient gRPC errors
+- [x] ~~**Retry/backoff on configclient**~~ — done: generic retry[T] with exponential backoff + jitter, opt-in via WithRetry()
 - [ ] **configwatcher write-through** — allow writes via watcher that optimistically update local values
 - [ ] **configwatcher field groups** — register a struct and auto-map fields by tag
 - [ ] **SDK code generation** — generate typed config structs from schema definitions
