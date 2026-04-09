@@ -21,7 +21,7 @@ Secret scan, LICENSE, README review, module paths, git history, GitHub settings,
 - [ ] **Python SDK** (effort 18) — PyPI package with thin wrapper
 - [ ] **Examples repo** (effort 19) — runnable examples per language
 - [ ] **Final README update** — add GUI/SDK sections when ready
-- [ ] **Verify ghcr.io image push** — confirm release workflow pushes images
+- [x] **Verify ghcr.io image push** — confirmed: :main images pull and run correctly
 
 ## Order
 
