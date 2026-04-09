@@ -38,7 +38,7 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 ## CLI Phase 4 — Polish
 
 - [x] ~~**Shell completion**~~ — done: bash, zsh, fish, powershell (cobra built-in + flag completions)
-- [ ] **Man page generation**
+- [x] ~~**Man page generation**~~ — done: 43 man pages via cobra/doc, committed to docs/man/
 - [x] ~~**Goreleaser**~~ — done: builds server + CLI for linux/mac/windows (amd64/arm64)
 - [ ] **Homebrew formula** — tap repo with goreleaser-generated formula
 

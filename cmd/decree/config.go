@@ -14,6 +14,7 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Read and write configuration values",
+	Long:  "Get and set typed configuration values for tenants. Supports single and batch operations, versioning, rollback, and YAML import/export.",
 }
 
 var configGetCmd = &cobra.Command{
