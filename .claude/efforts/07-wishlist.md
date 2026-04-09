@@ -9,7 +9,7 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 ## Infrastructure
 
 - [ ] **Helm chart** — Kubernetes deployment with configurable replicas, resource limits, env vars
-- [ ] **Wire in-memory storage** — `STORAGE_BACKEND=memory` option in cmd/server (in-memory impls exist, not yet wired)
+- [x] ~~**Wire in-memory storage**~~ — done: `STORAGE_BACKEND=memory` in cmd/server
 - [ ] **Usage stats recording** — async batched read tracking (deferred from AuditService)
 - [ ] **Docker layer caching** — cache-from/to in CI Docker build steps
 - [ ] **Internal coverage** — cache/pubsub need Redis mocks to reach 65%+
