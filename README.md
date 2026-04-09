@@ -114,7 +114,20 @@ Global flags: `--server`, `--subject`, `--role`, `--output table|json|yaml`
 
 ## Quick Start
 
-### Docker Compose (local development)
+### Try it instantly (no Docker needed)
+
+```bash
+go install github.com/zeevdr/decree/cmd/server@latest
+
+# Start with in-memory storage — zero dependencies
+STORAGE_BACKEND=memory HTTP_PORT=8080 decree-server
+
+# Open http://localhost:8080/docs for Swagger UI
+# All requests need x-subject header:
+curl -H "x-subject: admin" http://localhost:8080/v1/schemas
+```
+
+### Docker Compose (production-like)
 
 ```bash
 git clone https://github.com/zeevdr/decree.git
@@ -193,7 +206,8 @@ Single binary exposing three gRPC services. Deploy with `ENABLE_SERVICES` to con
 |----------|------------|---------|
 | `GRPC_PORT` | gRPC listen port | `9090` |
 | `HTTP_PORT` | REST/JSON gateway port (disabled if empty) | disabled |
-| `DB_WRITE_URL` | PostgreSQL primary connection string | required |
+| `STORAGE_BACKEND` | `postgres` or `memory` | `postgres` |
+| `DB_WRITE_URL` | PostgreSQL primary connection string | required (postgres) |
 | `DB_READ_URL` | PostgreSQL read replica connection string | `DB_WRITE_URL` |
 | `REDIS_URL` | Redis connection string | required |
 | `ENABLE_SERVICES` | Services to enable: `schema`, `config`, `audit` | all |

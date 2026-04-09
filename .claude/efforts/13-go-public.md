@@ -11,13 +11,16 @@ Secret scan, LICENSE, README review, module paths, git history, GitHub settings,
 
 ## Pre-Launch (before announcing)
 
-- [ ] **REST/HTTP Gateway** (effort 16) — REST/JSON API for all gRPC services
+- [x] **REST/HTTP Gateway** (effort 16) — REST/JSON API for all gRPC services
+- [x] **Schema enrichment** (effort 20) — OAS-inspired metadata
+- [x] **BSR proto publishing** — buf.build/opendecree/decree
+- [x] **In-memory storage** — `STORAGE_BACKEND=memory` for zero-dep evaluation
+- [x] **GitHub Project** — roadmap board with issues from efforts
 - [ ] **Admin GUI** (effort 17) — web UI for config/schema management (alpha)
 - [ ] **TypeScript SDK** (effort 18) — npm package with thin wrapper
 - [ ] **Python SDK** (effort 18) — PyPI package with thin wrapper
 - [ ] **Examples repo** (effort 19) — runnable examples per language
-- [ ] **BSR proto publishing** — buf push on release tags
-- [ ] **Final README update** — add REST/GUI/SDK sections, update install instructions
+- [ ] **Final README update** — add GUI/SDK sections when ready
 - [ ] **Verify ghcr.io image push** — confirm release workflow pushes images
 
 ## Order
