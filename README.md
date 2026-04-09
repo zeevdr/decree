@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="OpenDecree" width="150">
+  <img src="https://raw.githubusercontent.com/zeevdr/decree/main/assets/logo.png" alt="OpenDecree" width="150">
 </p>
 
 <h1 align="center">OpenDecree</h1>
