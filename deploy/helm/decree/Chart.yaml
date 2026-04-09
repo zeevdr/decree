@@ -1,0 +1,18 @@
+apiVersion: v2
+name: decree
+description: OpenDecree — Schema-driven business configuration management
+type: application
+version: 0.1.0
+appVersion: "0.3.0"
+home: https://github.com/zeevdr/decree
+sources:
+  - https://github.com/zeevdr/decree
+maintainers:
+  - name: zeevdr
+    url: https://github.com/zeevdr
+keywords:
+  - configuration
+  - config-management
+  - grpc
+  - multi-tenant
+  - schema-driven
