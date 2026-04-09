@@ -11,7 +11,7 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 - [x] ~~**Helm chart**~~ — done: deploy/helm/decree with full env var support, secrets, ingress, OTel
 - [x] ~~**Wire in-memory storage**~~ — done: `STORAGE_BACKEND=memory` in cmd/server
 - [ ] **Usage stats recording** — async batched read tracking (deferred from AuditService)
-- [ ] **Docker layer caching** — cache-from/to in CI Docker build steps
+- [x] ~~**Docker layer caching**~~ — done: GHA cache in main.yml + release.yml image builds
 - [ ] **Internal coverage** — cache/pubsub need Redis mocks to reach 65%+
 
 ## Contrib Integrations
