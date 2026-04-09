@@ -37,7 +37,7 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 ## CLI Phase 4 — Polish
 
-- [ ] **Shell completion** — bash, zsh, fish (cobra built-in)
+- [x] ~~**Shell completion**~~ — done: bash, zsh, fish, powershell (cobra built-in + flag completions)
 - [ ] **Man page generation**
 - [ ] **Homebrew formula / goreleaser**
 
