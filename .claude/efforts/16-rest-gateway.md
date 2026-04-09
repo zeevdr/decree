@@ -1,6 +1,6 @@
 # REST/HTTP Gateway
 
-**Status:** Planning
+**Status:** Complete
 **Started:** 2026-04-09
 
 ---
@@ -9,72 +9,36 @@
 
 Expose the entire gRPC API as REST/JSON via grpc-gateway. Foundation for the admin GUI, non-Go SDKs, and curl-based usage.
 
-## Approach
-
-Embed grpc-gateway in the server binary (same pattern as MinIO Console, Grafana). Not a separate process.
-
-## Work Items
+## What Was Done
 
 ### Proto Changes
-- [ ] Add `buf.build/googleapis/googleapis` dependency to `buf.yaml`
-- [ ] Add `import "google/api/annotations.proto"` to all 4 service protos
-- [ ] Add `google.api.http` annotations to all 29 RPCs
+- [x] Added `buf.build/googleapis/googleapis` dependency to `buf.yaml`
+- [x] Added `import "google/api/annotations.proto"` to all 4 service protos
+- [x] Added `google.api.http` annotations to all 32 RPCs
 
 ### Build Tooling
-- [ ] Add `protoc-gen-grpc-gateway` to `buf.gen.yaml` and `build/Dockerfile.tools`
-- [ ] Add `protoc-gen-openapiv2` to `buf.gen.yaml` and `build/Dockerfile.tools`
-- [ ] Run `make generate`, verify `.pb.gw.go` files and OpenAPI spec
+- [x] Added `protoc-gen-grpc-gateway` v2.27.3 to `buf.gen.yaml` and `build/Dockerfile.tools`
+- [x] Added `protoc-gen-openapiv2` v2.27.3 with merged output
+- [x] Disabled `go_package_prefix` for googleapis module (prevents broken imports)
 
 ### Server Integration
-- [ ] New `internal/server/gateway.go` — HTTP mux with gateway handlers
-- [ ] `HTTP_PORT` env var (default: 8080)
-- [ ] Forward auth headers (x-subject, x-role, x-tenant-id, Authorization) from HTTP → gRPC metadata
-- [ ] Wire into `cmd/server/main.go` — start HTTP server alongside gRPC
-- [ ] Update `docker-compose.yml` — add port 8080
+- [x] `internal/server/gateway.go` — HTTP reverse proxy with auth header forwarding
+- [x] Gateway is **opt-in**: only starts when `HTTP_PORT` env var is set
+- [x] Auth headers (x-subject, x-role, x-tenant-id, authorization) forwarded from HTTP to gRPC metadata
+- [x] Wired into `cmd/server/main.go` with graceful shutdown
 
-### URL Scheme
-| Service | Method | URL |
-|---------|--------|-----|
-| GetServerVersion | GET | `/v1/version` |
-| CreateSchema | POST | `/v1/schemas` |
-| GetSchema | GET | `/v1/schemas/{id}` |
-| ListSchemas | GET | `/v1/schemas` |
-| UpdateSchema | PATCH | `/v1/schemas/{id}` |
-| DeleteSchema | DELETE | `/v1/schemas/{id}` |
-| PublishSchema | POST | `/v1/schemas/{id}/publish` |
-| ExportSchema | GET | `/v1/schemas/{id}/export` |
-| ImportSchema | POST | `/v1/schemas/import` |
-| CreateTenant | POST | `/v1/tenants` |
-| GetTenant | GET | `/v1/tenants/{id}` |
-| ListTenants | GET | `/v1/tenants` |
-| UpdateTenant | PATCH | `/v1/tenants/{id}` |
-| DeleteTenant | DELETE | `/v1/tenants/{id}` |
-| LockField | POST | `/v1/tenants/{tenant_id}/locks` |
-| UnlockField | DELETE | `/v1/tenants/{tenant_id}/locks/{field_path}` |
-| ListFieldLocks | GET | `/v1/tenants/{tenant_id}/locks` |
-| GetConfig | GET | `/v1/tenants/{tenant_id}/config` |
-| GetField | GET | `/v1/tenants/{tenant_id}/config/fields` |
-| GetFields | POST | `/v1/tenants/{tenant_id}/config:batchGet` |
-| SetField | PUT | `/v1/tenants/{tenant_id}/config/fields` |
-| SetFields | POST | `/v1/tenants/{tenant_id}/config:batchSet` |
-| ListVersions | GET | `/v1/tenants/{tenant_id}/versions` |
-| GetVersion | GET | `/v1/tenants/{tenant_id}/versions/{version}` |
-| RollbackToVersion | POST | `/v1/tenants/{tenant_id}/versions/{version}:rollback` |
-| Subscribe | GET | `/v1/tenants/{tenant_id}/config:subscribe` |
-| ExportConfig | GET | `/v1/tenants/{tenant_id}/config/export` |
-| ImportConfig | POST | `/v1/tenants/{tenant_id}/config/import` |
-| QueryWriteLog | GET | `/v1/audit/logs` |
-| GetFieldUsage | GET | `/v1/tenants/{tenant_id}/usage/{field_path}` |
-| GetTenantUsage | GET | `/v1/tenants/{tenant_id}/usage` |
-| GetUnusedFields | GET | `/v1/tenants/{tenant_id}/unused-fields` |
-
-Note: Field paths with dots use query params, not URL path segments.
+### Tests
+- [x] Unit tests: gateway creation, disable when no port, auth header forwarding
+- [x] E2E tests: REST version, schema lifecycle CRUD, auth headers, 404 mapping
 
 ### Outputs
-- [ ] OpenAPI spec at `docs/api/openapi.json`
-- [ ] Verify with curl: `curl http://localhost:8080/v1/version`
+- [x] Gateway `.pb.gw.go` files for all 4 services
+- [x] Merged OpenAPI spec at `docs/api/openapi.swagger.json`
+- [x] Docker Compose updated with HTTP_PORT=8080, port 8080 mapped
 
 ## Key Decisions
+- Gateway is optional — `HTTP_PORT=""` (default) means gRPC only
 - Embedded in server binary, not a sidecar
-- `HTTP_PORT` separate from `GRPC_PORT`
-- Subscribe streams as newline-delimited JSON
+- Field paths in URLs: `field_path` as path segment for GetField/SetField
+- Subscribe streams as newline-delimited JSON via grpc-gateway default
+- OpenAPI spec merged into single file
