@@ -64,8 +64,8 @@ Currently single-platform (linux/amd64). Could add `platforms: linux/amd64,linux
 
 ## Work Items
 
-- [ ] **Fix Docker version injection** — ldflags in Dockerfile + CI build args
-- [ ] **Fix release notes template** — static install section, no shell leakage
-- [ ] **Add Go module caching to goreleaser step** — faster binary builds
-- [ ] **Multi-platform Docker images** — linux/amd64 + linux/arm64
+- [x] **Fix Docker version injection** — ARG VERSION/COMMIT in both Dockerfiles + CI build args
+- [x] **Fix release notes template** — rewritten with heredoc, no shell leakage
+- [x] **Go module caching in goreleaser** — already handled by actions/setup-go@v6
+- [x] **Multi-platform Docker images** — linux/amd64 + linux/arm64 in both main.yml and release.yml
 - [ ] **Post-release checklist** — automated verification script
