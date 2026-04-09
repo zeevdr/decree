@@ -8,14 +8,15 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 ## Infrastructure
 
-- [ ] **Docker images on ghcr.io** — publish server (`ghcr.io/zeevdr/decree`) and CLI (`ghcr.io/zeevdr/decree`) images. CLI needs its own Dockerfile (distroless). Manual push initially, CI-automated later.
 - [ ] **Helm chart** — Kubernetes deployment with configurable replicas, resource limits, env vars
-- [ ] **CI (GitHub Actions)** — lint, test, build, e2e on PR; image push on tag/release to ghcr.io
+- [ ] **Wire in-memory storage** — `STORAGE_BACKEND=memory` option in cmd/server (in-memory impls exist, not yet wired)
 - [ ] **Usage stats recording** — async batched read tracking (deferred from AuditService)
+- [ ] **Docker layer caching** — cache-from/to in CI Docker build steps
+- [ ] **Internal coverage** — cache/pubsub need Redis mocks to reach 65%+
 
 ## Contrib Integrations
 
-- [ ] **contrib/viper** — viper remote provider backed by configclient (read-only config source)
+- [ ] **contrib/viper** — viper remote provider backed by configclient
 - [ ] **contrib/koanf** — koanf provider for the Koanf config library
 - [ ] **contrib/envconfig** — adapter that populates struct fields from config values
 
@@ -28,20 +29,25 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 ## Service Features
 
-- [x] ~~**Field validation on write**~~ — done (effort 09)
-- [ ] **Webhook notifications** — HTTP webhook callbacks on config changes (alternative to gRPC streaming)
-- [ ] **Config diffing** — API to diff two config versions and return changed fields
+- [ ] **Webhook notifications** — HTTP callbacks on config changes (alternative to gRPC streaming)
+- [ ] **Config diffing API** — server-side diff between two config versions
 - [ ] **Schema migration assistant** — tooling to help migrate config values when schema changes
 - [ ] **Multi-environment promotion** — promote config from dev → staging → prod with approval workflow
 - [ ] **Config templates** — default config values defined at schema level, applied on tenant creation
 
+## CLI Phase 4 — Polish
+
+- [ ] **Shell completion** — bash, zsh, fish (cobra built-in)
+- [ ] **Man page generation**
+- [ ] **Homebrew formula / goreleaser**
+
 ## Observability
 
-- [ ] **Grafana dashboard template** — pre-built dashboard for the OTel metrics
-- [ ] **Alerting rules** — Prometheus alerting rules for DB pool exhaustion, high error rates
+- [ ] **Grafana dashboard template** — pre-built dashboard for OTel metrics
+- [ ] **Alerting rules** — Prometheus rules for DB pool exhaustion, high error rates
 
 ## Documentation
 
-- [x] ~~**API reference**~~ — done (protoc-gen-doc, effort 11)
-- [x] ~~**Getting started guide**~~ — done (effort 11)
-- [ ] **Architecture decision records (ADRs)** — formalize key decisions from efforts into ADR format
+- [ ] **Architecture decision records (ADRs)** — formalize key decisions into ADR format
+- [ ] **Social preview** — repo card image for link sharing
+- [ ] **Blog post / announcement** — introduce OpenDecree
