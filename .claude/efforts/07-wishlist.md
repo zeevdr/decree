@@ -39,7 +39,8 @@ Items roughly prioritized. Not committed to — this is a living list of ideas.
 
 - [x] ~~**Shell completion**~~ — done: bash, zsh, fish, powershell (cobra built-in + flag completions)
 - [ ] **Man page generation**
-- [ ] **Homebrew formula / goreleaser**
+- [x] ~~**Goreleaser**~~ — done: builds server + CLI for linux/mac/windows (amd64/arm64)
+- [ ] **Homebrew formula** — tap repo with goreleaser-generated formula
 
 ## Observability
 
