@@ -88,8 +88,8 @@ bench-e2e:
 	cd e2e && go test -tags=e2e -bench=. -benchmem -count=3 -run=^$ -timeout=300s ./... || (cd .. && docker compose down -v && exit 1)
 	docker compose down -v
 
-## docs: Generate all documentation (API + CLI)
-docs: docs-api docs-cli
+## docs: Generate all documentation (API + CLI + man pages)
+docs: docs-api docs-cli docs-man
 
 ## docs-api: Generate proto API reference markdown
 docs-api: $(TOOLS_SENTINEL)
@@ -99,6 +99,10 @@ docs-api: $(TOOLS_SENTINEL)
 ## docs-cli: Generate CLI reference markdown
 docs-cli:
 	cd cmd/decree && go build -ldflags '$(CLI_LDFLAGS)' -o ../../$(BUILD_DIR)/decree . && cd ../.. && $(BUILD_DIR)/decree gen-docs docs/cli
+
+## docs-man: Generate man pages
+docs-man:
+	cd cmd/decree && go build -ldflags '$(CLI_LDFLAGS)' -o ../../$(BUILD_DIR)/decree . && cd ../.. && $(BUILD_DIR)/decree gen-man docs/man
 
 ## docs-serve: Local MkDocs preview (Docker) at http://localhost:8000
 docs-serve:
