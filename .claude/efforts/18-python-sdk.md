@@ -16,9 +16,9 @@ A production-quality Python SDK for OpenDecree that covers config reads, writes,
 
 | Feature | Description |
 |---------|-------------|
-| ConfigClient (sync) | get, get_all, set, set_many, set_null + typed getters (get_int, get_bool, get_float, get_string, get_duration) |
-| AsyncConfigClient | Same API but async/await |
-| ConfigWatcher (sync) | Register fields, background thread, .get() for current value, callbacks for changes |
+| ConfigClient (sync) | `get(tenant, field)` → str, `get(tenant, field, type)` → typed via @overload. set, set_many, set_null, get_all |
+| AsyncConfigClient | Same overloaded get() API but async/await |
+| ConfigWatcher (sync) | `watcher.field(path, type, default)` — generic typed fields, background thread, callbacks |
 | AsyncConfigWatcher | Same but asyncio-native, async iterator for changes |
 | Auth | Metadata headers (x-subject, x-role, x-tenant-id) and Bearer token injection via interceptors |
 | Error mapping | gRPC StatusCode → typed Python exceptions (NotFoundError, LockedError, etc.) |
@@ -127,18 +127,23 @@ decree-python/
 
 ```python
 from opendecree import ConfigClient
+from datetime import timedelta
 
 # Create client — context manager for clean channel lifecycle
 with ConfigClient("localhost:9090", subject="myapp") as client:
-    # String get/set (any type as string)
-    val = client.get("tenant-id", "payments.fee")
-    client.set("tenant-id", "payments.fee", "0.5%")
+    # get() with no type → str (default)
+    val = client.get("tenant-id", "payments.fee")                    # → str
 
-    # Typed getters — return native Python types
-    retries = client.get_int("tenant-id", "payments.retries")
-    enabled = client.get_bool("tenant-id", "payments.enabled")
-    rate = client.get_float("tenant-id", "payments.fee_rate")
-    timeout = client.get_duration("tenant-id", "payments.timeout")  # → timedelta
+    # get() with type argument → typed return (overloaded)
+    retries = client.get("tenant-id", "payments.retries", int)       # → int
+    enabled = client.get("tenant-id", "payments.enabled", bool)      # → bool
+    rate    = client.get("tenant-id", "payments.fee_rate", float)    # → float
+    timeout = client.get("tenant-id", "payments.timeout", timedelta) # → timedelta
+
+    # mypy infers the return type correctly via @overload
+
+    # Set (always string — server handles type conversion)
+    client.set("tenant-id", "payments.fee", "0.5%")
 
     # Bulk operations
     all_config = client.get_all("tenant-id")  # → dict[str, str]
@@ -147,12 +152,32 @@ with ConfigClient("localhost:9090", subject="myapp") as client:
     # Null
     client.set_null("tenant-id", "payments.fee")
 
-    # Nullable getter
-    val = client.get_nullable("tenant-id", "payments.fee")  # → str | None
+    # Nullable get — returns None instead of raising on null values
+    val = client.get("tenant-id", "payments.fee", str, nullable=True)  # → str | None
 
     # Server compatibility check
     client.check_compatibility()  # raises IncompatibleServerError if mismatch
 ```
+
+**Type signature (overloaded):**
+
+```python
+@overload
+def get(self, tenant_id: str, field_path: str) -> str: ...
+@overload
+def get(self, tenant_id: str, field_path: str, type: type[int]) -> int: ...
+@overload
+def get(self, tenant_id: str, field_path: str, type: type[float]) -> float: ...
+@overload
+def get(self, tenant_id: str, field_path: str, type: type[bool]) -> bool: ...
+@overload
+def get(self, tenant_id: str, field_path: str, type: type[timedelta]) -> timedelta: ...
+@overload
+def get(self, tenant_id: str, field_path: str, type: type[str], nullable: bool = ...) -> str | None: ...
+# etc.
+```
+
+Supported types: `str`, `int`, `float`, `bool`, `timedelta`. Conversion from the proto TypedValue string representation happens in the SDK.
 
 ### AsyncConfigClient
 
@@ -160,10 +185,12 @@ with ConfigClient("localhost:9090", subject="myapp") as client:
 from opendecree import AsyncConfigClient
 
 async with AsyncConfigClient("localhost:9090", subject="myapp") as client:
-    val = await client.get("tenant-id", "payments.fee")
+    val     = await client.get("tenant-id", "payments.fee")            # → str
+    retries = await client.get("tenant-id", "payments.retries", int)   # → int
     await client.set("tenant-id", "payments.fee", "0.5%")
-    retries = await client.get_int("tenant-id", "payments.retries")
 ```
+
+Same `get()` overload pattern as the sync client.
 
 ### ConfigWatcher (sync)
 
@@ -173,15 +200,16 @@ from opendecree import ConfigClient, ConfigWatcher
 with ConfigClient("localhost:9090", subject="myapp") as client:
     watcher = ConfigWatcher(client, "tenant-id")
 
-    # Register fields with type + default
-    fee = watcher.float_field("payments.fee", default=0.01)
-    enabled = watcher.bool_field("payments.enabled", default=False)
+    # Register fields with type + default (generic)
+    fee     = watcher.field("payments.fee", float, default=0.01)
+    enabled = watcher.field("payments.enabled", bool, default=False)
+    name    = watcher.field("payments.name", str, default="")
 
     watcher.start()  # background thread, loads snapshot + subscribes
 
-    # Always-fresh reads (thread-safe)
-    print(fee.get())       # 0.025
-    print(enabled.get())   # True
+    # Always-fresh reads (thread-safe, typed)
+    print(fee.get())       # 0.025 (float)
+    print(enabled.get())   # True (bool)
 
     # Change callbacks
     @fee.on_change
@@ -202,7 +230,7 @@ from opendecree import AsyncConfigClient, AsyncConfigWatcher
 
 async with AsyncConfigClient("localhost:9090", subject="myapp") as client:
     watcher = AsyncConfigWatcher(client, "tenant-id")
-    fee = watcher.float_field("payments.fee", default=0.01)
+    fee = watcher.field("payments.fee", float, default=0.01)
 
     await watcher.start()
 
