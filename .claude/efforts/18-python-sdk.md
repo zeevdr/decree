@@ -1,6 +1,6 @@
 # Python SDK (`opendecree`)
 
-**Status:** Planning
+**Status:** In Progress (Phase 1 complete)
 **Started:** 2026-04-10
 **Repo:** `zeevdr/decree-python`
 **PyPI:** `opendecree`
@@ -367,22 +367,19 @@ The README has a short "Getting Started" section and links to both local docs/ a
 
 ## Implementation Phases
 
-### Phase 1: Scaffold + Stubs (day 1)
+### Phase 1: Scaffold + Stubs — DONE
 
-- [ ] Create repo `zeevdr/decree-python`
-- [ ] `sdk/pyproject.toml` with setuptools, minimal deps (grpcio + protobuf)
-- [ ] `Makefile` with targets: generate, lint, format, typecheck, test, build
-- [ ] Proto generation: fetch from BSR, generate with grpcio-tools + mypy-protobuf
-- [ ] Commit generated stubs to `sdk/src/opendecree/_generated/`
-- [ ] `.gitattributes`, `.python-version`, `py.typed`
-- [ ] Empty `__init__.py` with version + public API stubs
-- [ ] CI workflow: `.github/workflows/ci.yml`
-  - Trigger: push to main + PRs
-  - Matrix: Python 3.11, 3.12, 3.13
-  - Jobs: lint (ruff check + format --check), typecheck (mypy), test (pytest --cov)
-  - Generate check: regenerate stubs, `git diff --exit-code` to catch stale stubs
-- [ ] Add repo to existing OpenDecree GitHub Project (same board as main repo)
-  - Add auto-add workflow for issues/PRs from `decree-python`
+- [x] Create repo `zeevdr/decree-python`
+- [x] `sdk/pyproject.toml` with setuptools, minimal deps (grpcio + protobuf)
+- [x] `Makefile` with Docker-based targets: generate, lint, format, typecheck, test, build, clean
+- [x] Docker tools image (`build/Dockerfile.tools`) — all dev tools containerized
+- [x] Proto generation via grpcio-tools + mypy-protobuf (mounted from main repo)
+- [x] Generated stubs committed to `sdk/src/opendecree/_generated/`
+- [x] `.gitattributes`, `.gitignore`, `.python-version`, `py.typed`
+- [x] `__init__.py` with version, SUPPORTED_SERVER_VERSION, PROTO_VERSION
+- [x] CI workflow + publish workflow (OIDC)
+- [x] README with quickstart examples
+- [ ] Add repo to existing OpenDecree GitHub Project (manual step)
 
 ### Phase 2: ConfigClient — sync (days 2-3)
 

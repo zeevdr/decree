@@ -18,7 +18,7 @@ Secret scan, LICENSE, README review, module paths, git history, GitHub settings,
 - [x] **GitHub Project** — roadmap board with issues from efforts
 - [ ] **Admin GUI** (effort 17) — web UI for config/schema management (alpha)
 - [ ] **TypeScript SDK** (effort 18) — npm package with thin wrapper
-- [ ] **Python SDK** (effort 18) — PyPI package with thin wrapper
+- [ ] **Python SDK** (effort 18) — Phase 1 done (scaffold + stubs), Phase 2-6 remaining
 - [ ] **Examples repo** (effort 19) — runnable examples per language
 - [ ] **Final README update** — add GUI/SDK sections when ready
 - [x] **Verify ghcr.io image push** — confirmed: :main images pull and run correctly
