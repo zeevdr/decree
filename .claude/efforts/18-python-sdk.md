@@ -326,8 +326,14 @@ The README has a short "Getting Started" section and links to both local docs/ a
 - [ ] Proto generation: fetch from BSR, generate with grpcio-tools + mypy-protobuf
 - [ ] Commit generated stubs to `sdk/src/opendecree/_generated/`
 - [ ] `.gitattributes`, `.python-version`, `py.typed`
-- [ ] CI workflow (lint + typecheck + test matrix)
 - [ ] Empty `__init__.py` with version + public API stubs
+- [ ] CI workflow: `.github/workflows/ci.yml`
+  - Trigger: push to main + PRs
+  - Matrix: Python 3.11, 3.12, 3.13
+  - Jobs: lint (ruff check + format --check), typecheck (mypy), test (pytest --cov)
+  - Generate check: regenerate stubs, `git diff --exit-code` to catch stale stubs
+- [ ] Add repo to existing OpenDecree GitHub Project (same board as main repo)
+  - Add auto-add workflow for issues/PRs from `decree-python`
 
 ### Phase 2: ConfigClient — sync (days 2-3)
 
@@ -374,9 +380,12 @@ The README has a short "Getting Started" section and links to both local docs/ a
 - [ ] `docs/watching.md` — watcher patterns
 - [ ] `docs/async.md` — async usage guide
 - [ ] `CHANGELOG.md` — v0.1.0 entry
-- [ ] PyPI trusted publisher setup
-- [ ] `publish.yml` workflow
-- [ ] Tag v0.1.0, verify PyPI publish
+- [ ] PyPI trusted publisher setup (OIDC — add pending publisher on pypi.org)
+- [ ] Publish workflow: `.github/workflows/publish.yml`
+  - Trigger: push tag `v*.*.*`
+  - Runs CI first (lint + test), then builds sdist + wheel, publishes via `pypa/gh-action-pypi-publish`
+  - Permissions: `id-token: write` for OIDC, environment: `pypi`
+- [ ] Tag v0.1.0, verify PyPI publish + `pip install opendecree` works
 
 ## Key Decisions
 
