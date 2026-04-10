@@ -16,10 +16,10 @@ A production-quality Python SDK for OpenDecree that covers config reads, writes,
 
 | Feature | Description |
 |---------|-------------|
-| ConfigClient (sync) | `get(tenant, field)` → str, `get(tenant, field, type)` → typed via @overload. set, set_many, set_null, get_all |
-| AsyncConfigClient | Same overloaded get() API but async/await |
-| ConfigWatcher (sync) | `watcher.field(path, type, default)` — generic typed fields, background thread, callbacks |
-| AsyncConfigWatcher | Same but asyncio-native, async iterator for changes |
+| ConfigClient (sync) | `get(t, f)` → str, `get(t, f, type)` → typed via @overload. set, set_many, set_null, get_all. Context manager. `watch()` factory. |
+| AsyncConfigClient | Same overloaded API with async/await. Async context manager. |
+| ConfigWatcher (sync) | `client.watch(t)` context manager → `watcher.field(path, type, default)` → `WatchedField[T]`. `.value` property, `__bool__`. |
+| AsyncConfigWatcher | Same but asyncio-native. Async context manager, async iterator for changes. |
 | Auth | Metadata headers (x-subject, x-role, x-tenant-id) and Bearer token injection via interceptors |
 | Error mapping | gRPC StatusCode → typed Python exceptions (NotFoundError, LockedError, etc.) |
 | Retry | Exponential backoff with jitter for transient errors (UNAVAILABLE, DEADLINE_EXCEEDED) |
@@ -123,24 +123,31 @@ decree-python/
 
 ## Public API Design
 
+### Pythonic Patterns
+
+- **Context managers** for all resources with lifecycles (clients, watchers)
+- **`@overload` + generics** for typed `get()` — one method, mypy-verified return types
+- **`.value` property** on watched fields instead of `.get()` method
+- **`__bool__`** on watched fields for natural conditionals (`if enabled:`)
+- **`@dataclass(frozen=True, slots=True)`** for all return types — immutable, fast (3.11+)
+- **`client.watch()`** factory method — watcher inherits connection/auth from client
+
 ### ConfigClient (sync)
 
 ```python
 from opendecree import ConfigClient
 from datetime import timedelta
 
-# Create client — context manager for clean channel lifecycle
+# Context manager for clean channel lifecycle
 with ConfigClient("localhost:9090", subject="myapp") as client:
     # get() with no type → str (default)
     val = client.get("tenant-id", "payments.fee")                    # → str
 
-    # get() with type argument → typed return (overloaded)
+    # get() with type argument → typed return (via @overload)
     retries = client.get("tenant-id", "payments.retries", int)       # → int
     enabled = client.get("tenant-id", "payments.enabled", bool)      # → bool
     rate    = client.get("tenant-id", "payments.fee_rate", float)    # → float
     timeout = client.get("tenant-id", "payments.timeout", timedelta) # → timedelta
-
-    # mypy infers the return type correctly via @overload
 
     # Set (always string — server handles type conversion)
     client.set("tenant-id", "payments.fee", "0.5%")
@@ -174,10 +181,9 @@ def get(self, tenant_id: str, field_path: str, type: type[bool]) -> bool: ...
 def get(self, tenant_id: str, field_path: str, type: type[timedelta]) -> timedelta: ...
 @overload
 def get(self, tenant_id: str, field_path: str, type: type[str], nullable: bool = ...) -> str | None: ...
-# etc.
 ```
 
-Supported types: `str`, `int`, `float`, `bool`, `timedelta`. Conversion from the proto TypedValue string representation happens in the SDK.
+Supported types: `str`, `int`, `float`, `bool`, `timedelta`. Conversion from the proto TypedValue happens in the SDK.
 
 ### AsyncConfigClient
 
@@ -190,56 +196,71 @@ async with AsyncConfigClient("localhost:9090", subject="myapp") as client:
     await client.set("tenant-id", "payments.fee", "0.5%")
 ```
 
-Same `get()` overload pattern as the sync client.
+Same `get()` overload pattern. Async context manager (`__aenter__`/`__aexit__`).
 
 ### ConfigWatcher (sync)
 
+Watcher created via `client.watch()` — inherits connection and auth. Context manager auto-starts/stops.
+
 ```python
-from opendecree import ConfigClient, ConfigWatcher
+from opendecree import ConfigClient
 
 with ConfigClient("localhost:9090", subject="myapp") as client:
-    watcher = ConfigWatcher(client, "tenant-id")
+    with client.watch("tenant-id") as watcher:
+        # Register fields with type + default (generic)
+        fee     = watcher.field("payments.fee", float, default=0.01)
+        enabled = watcher.field("payments.enabled", bool, default=False)
+        name    = watcher.field("payments.name", str, default="")
 
-    # Register fields with type + default (generic)
-    fee     = watcher.field("payments.fee", float, default=0.01)
-    enabled = watcher.field("payments.enabled", bool, default=False)
-    name    = watcher.field("payments.name", str, default="")
+        # .value property — always-fresh, thread-safe, typed
+        print(fee.value)          # 0.025 (float)
+        print(enabled.value)      # True (bool)
 
-    watcher.start()  # background thread, loads snapshot + subscribes
+        # __bool__ — fields are truthy/falsy based on their value
+        if enabled:
+            print(f"Processing at rate {fee.value}")
 
-    # Always-fresh reads (thread-safe, typed)
-    print(fee.get())       # 0.025 (float)
-    print(enabled.get())   # True (bool)
+        # Change callbacks
+        @fee.on_change
+        def fee_changed(old: float, new: float):
+            print(f"Fee changed: {old} → {new}")
 
-    # Change callbacks
-    @fee.on_change
-    def fee_changed(old: float, new: float):
-        print(f"Fee changed: {old} → {new}")
-
-    # Or iterate changes
-    for change in fee.changes():  # blocking iterator
-        print(change)
-
-    watcher.stop()
+        # Or iterate changes (blocking)
+        for change in fee.changes():
+            print(change)
+    # watcher auto-stops on exit
 ```
 
 ### AsyncConfigWatcher
 
 ```python
-from opendecree import AsyncConfigClient, AsyncConfigWatcher
+from opendecree import AsyncConfigClient
 
 async with AsyncConfigClient("localhost:9090", subject="myapp") as client:
-    watcher = AsyncConfigWatcher(client, "tenant-id")
-    fee = watcher.field("payments.fee", float, default=0.01)
+    async with client.watch("tenant-id") as watcher:
+        fee = watcher.field("payments.fee", float, default=0.01)
 
-    await watcher.start()
+        print(fee.value)  # always-fresh
 
-    print(fee.get())  # always-fresh, thread-safe
+        if fee:  # __bool__ works
+            print("fee is set")
 
-    async for change in fee.changes():  # async iterator
-        print(f"{change.old_value} → {change.new_value}")
+        async for change in fee.changes():  # async iterator
+            print(f"{change.old_value} → {change.new_value}")
+    # auto-stops on exit
+```
 
-    await watcher.stop()
+### WatchedField[T]
+
+```python
+class WatchedField(Generic[T]):
+    @property
+    def value(self) -> T: ...           # always-fresh, thread-safe
+    def __bool__(self) -> bool: ...     # truthy based on value (False/0/""/"0" → False)
+    def on_change(self, fn: Callable[[T, T], None]) -> None: ...  # decorator
+    def changes(self) -> Iterator[Change[T]]: ...                  # sync: blocking iterator
+    # async variant:
+    def changes(self) -> AsyncIterator[Change[T]]: ...             # async iterator
 ```
 
 ### Client Options
@@ -295,14 +316,14 @@ class TypeMismatchError(DecreeError): ...        # wrong type getter
 ### Types (dataclass wrappers)
 
 ```python
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ConfigValue:
     field_path: str
     value: str            # raw string value
     checksum: str
     description: str
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Change:
     field_path: str
     old_value: str | None
@@ -310,7 +331,7 @@ class Change:
     version: int
     changed_by: str
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ServerVersion:
     version: str          # e.g., "0.3.1"
     commit: str
@@ -371,7 +392,7 @@ The README has a short "Getting Started" section and links to both local docs/ a
 - [ ] `types.py` — ConfigValue, Change, ServerVersion dataclasses
 - [ ] `_retry.py` — exponential backoff with jitter
 - [ ] `_compat.py` — VersionService call + version comparison
-- [ ] `client.py` — ConfigClient with all methods
+- [ ] `client.py` — ConfigClient with overloaded `get()`, context manager, `watch()` factory
 - [ ] Tests for all client methods (mock stubs)
 - [ ] Tests for error mapping, retry, interceptors
 
@@ -383,21 +404,22 @@ The README has a short "Getting Started" section and links to both local docs/ a
 
 ### Phase 4: ConfigWatcher — sync (days 5-6)
 
-- [ ] `watcher.py` — ConfigWatcher with background thread
-  - Register typed fields (string, int, float, bool, duration)
-  - Start: load snapshot + subscribe to stream
-  - Thread-safe `.get()` on field values
+- [ ] `watcher.py` — ConfigWatcher as context manager (via `client.watch()`)
+  - Generic `watcher.field(path, type, default)` → `WatchedField[T]`
+  - `.value` property (thread-safe, always-fresh)
+  - `__bool__` for natural conditionals
   - Change callbacks via `@field.on_change`
   - Blocking iterator via `field.changes()`
+  - Auto-start on `__enter__`, auto-stop on `__exit__`
   - Auto-reconnect with backoff on stream failure
 - [ ] Tests for watcher lifecycle, reconnection, type conversion
 
 ### Phase 5: AsyncConfigWatcher (day 7)
 
-- [ ] `async_watcher.py` — AsyncConfigWatcher
-  - Same API but asyncio-native
-  - `async for change in field.changes()`
-  - `await watcher.start()` / `await watcher.stop()`
+- [ ] `async_watcher.py` — AsyncConfigWatcher as async context manager
+  - Same `WatchedField[T]` API (`.value`, `__bool__`, `on_change`)
+  - `async for change in field.changes()` — async iterator
+  - Auto-start on `__aenter__`, auto-stop on `__aexit__`
 - [ ] Tests for async watcher
 
 ### Phase 6: Docs + Distribution (day 8)
@@ -421,16 +443,19 @@ The README has a short "Getting Started" section and links to both local docs/ a
 2. **Python 3.11+** — 3.10 loses security support soon
 3. **grpcio (not betterproto)** — official, stable, C-core performance, sync+async in one package
 4. **setuptools build** — comes with Python, PEP 621 pyproject.toml, no plugins. Version is a string, not dynamic.
-5. **Maximize code generation from protos** — grpcio-tools + mypy-protobuf generate stubs; wrapper code is thin and derives types/methods from proto definitions
+5. **Maximize code generation from protos** — grpcio-tools + mypy-protobuf generate stubs; wrapper code is thin
 6. **ruff for linting+formatting** — single dev tool, replaces black+isort+flake8
-7. **Dataclass return types** — don't expose proto messages in public API
+7. **`@dataclass(frozen=True, slots=True)` return types** — immutable, fast, don't expose proto messages
 8. **Both sync + async** — sync as primary, async mirrors the same API
-9. **Watcher uses background thread (sync) / asyncio task (async)** — mirrors Go pattern
-10. **PyPI trusted publishing** — OIDC, no API tokens
-11. **Usage docs in Python repo, concepts link to main docs** — avoid duplication
-12. **Client reports supported proto/server version** — `check_compatibility()` call + constants
-13. **Stubs committed to repo** — same pattern as Go generated code
-14. **Repo is `decree-python` not `decree-sdk-python`** — room for contrib packages later
+9. **Overloaded `get()` with generics** — `get(t, f)` → str, `get(t, f, int)` → int. One method, mypy-verified.
+10. **`client.watch()` factory** — watcher inherits connection/auth, context manager for lifecycle
+11. **`WatchedField[T]`** — `.value` property, `__bool__`, `on_change` callback, `changes()` iterator
+12. **Context managers everywhere** — clients and watchers use `with`/`async with` for clean lifecycle
+13. **PyPI trusted publishing** — OIDC, no API tokens
+14. **Usage docs in Python repo, concepts link to main docs** — avoid duplication
+15. **Client reports supported proto/server version** — `check_compatibility()` call + constants
+16. **Stubs committed to repo** — same pattern as Go generated code
+17. **Repo is `decree-python` not `decree-sdk-python`** — room for contrib packages later
 
 ## Verification
 
