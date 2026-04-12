@@ -6,8 +6,16 @@
 
 <p align="center">
   <a href="https://github.com/zeevdr/decree/actions/workflows/ci.yml"><img src="https://github.com/zeevdr/decree/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/zeevdr/decree/releases"><img src="https://img.shields.io/github/v/release/zeevdr/decree" alt="Release"></a>
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.24-00ADD8?logo=go" alt="Go"></a>
+  <a href="https://goreportcard.com/report/github.com/zeevdr/decree"><img src="https://goreportcard.com/badge/github.com/zeevdr/decree" alt="Go Report Card"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/server_coverage-85%25-brightgreen" alt="Server Coverage">
+  <img src="https://img.shields.io/badge/Go_SDK_coverage-94%25-brightgreen" alt="Go SDK Coverage">
+  <img src="https://img.shields.io/badge/Python_SDK_coverage-98%25-brightgreen" alt="Python SDK Coverage">
 </p>
 
 <p align="center">Schema-driven business configuration management for multi-tenant services.</p>
@@ -252,6 +260,20 @@ The API is defined in Protocol Buffers under [`proto/`](proto/). Three gRPC serv
 - **AuditService** — query change history and usage statistics
 
 Values use a `TypedValue` oneof — integer, number, string, bool, timestamp, duration, url, json — with null support.
+
+## Test Coverage
+
+Coverage badges reflect **business logic only** — infrastructure wrappers that are tested at the integration/e2e level are excluded from the calculation:
+
+| Excluded | Reason |
+|----------|--------|
+| `store_pg.go` | PostgreSQL store implementations — thin DB wrappers, tested via e2e |
+| `redis.go` | Redis cache/pubsub implementations — thin wrappers, tested via e2e |
+| `storage/dbstore/` | sqlc-generated query code |
+| `storage/postgres.go` | Interface definitions only |
+| `telemetry/` | OpenTelemetry provider wiring boilerplate |
+
+Run `./scripts/coverage.sh` to calculate the server coverage, or `./scripts/coverage.sh -v` for a per-function breakdown.
 
 ## Contributing
 

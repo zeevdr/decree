@@ -26,6 +26,7 @@ Standard checklists for Claude to follow at each stage of the development workfl
 - [ ] Generated docs are up to date: `make docs` produces no diff
 - [ ] OpenAPI spec in sync: `cmd/server/openapi.json` matches `docs/api/openapi.swagger.json`
 - [ ] Coverage didn't drop — if it did, add tests or adjust threshold with justification
+- [ ] Update coverage badge if changed: `./scripts/coverage.sh` (server), update README badge
 - [ ] Effort docs updated if relevant (`.claude/efforts/`)
 - [ ] PR description includes Summary, Test plan
 - [ ] No TODO/FIXME introduced without a corresponding GitHub issue
@@ -50,6 +51,8 @@ Standard checklists for Claude to follow at each stage of the development workfl
 - [ ] Gitleaks clean: `docker run --rm -v $(pwd):/path zricethezav/gitleaks:latest git /path`
 - [ ] Docker images build and run: `STORAGE_BACKEND=memory` smoke test
 - [ ] Coverage ratchet passes
+- [ ] Coverage badge is accurate: `./scripts/coverage.sh` matches README badge
+- [ ] Go SDK coverage up to date: `go test -cover ./sdk/...` matches README badge
 - [ ] Changelog/highlights drafted for release notes
 
 ## Release Tag Process
