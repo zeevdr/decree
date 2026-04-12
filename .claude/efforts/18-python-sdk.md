@@ -1,7 +1,8 @@
 # Python SDK (`opendecree`)
 
-**Status:** Planning
+**Status:** In Progress (Phases 1–4 complete, Phase 5 uncommitted, Phase 6 partial)
 **Started:** 2026-04-10
+**Last Updated:** 2026-04-12
 **Repo:** `zeevdr/decree-python`
 **PyPI:** `opendecree`
 **Python:** 3.11+
@@ -367,74 +368,63 @@ The README has a short "Getting Started" section and links to both local docs/ a
 
 ## Implementation Phases
 
-### Phase 1: Scaffold + Stubs (day 1)
+### Phase 1: Scaffold + Stubs — COMPLETE (2026-04-10)
 
-- [ ] Create repo `zeevdr/decree-python`
-- [ ] `sdk/pyproject.toml` with setuptools, minimal deps (grpcio + protobuf)
-- [ ] `Makefile` with targets: generate, lint, format, typecheck, test, build
-- [ ] Proto generation: fetch from BSR, generate with grpcio-tools + mypy-protobuf
-- [ ] Commit generated stubs to `sdk/src/opendecree/_generated/`
-- [ ] `.gitattributes`, `.python-version`, `py.typed`
-- [ ] Empty `__init__.py` with version + public API stubs
-- [ ] CI workflow: `.github/workflows/ci.yml`
-  - Trigger: push to main + PRs
-  - Matrix: Python 3.11, 3.12, 3.13
-  - Jobs: lint (ruff check + format --check), typecheck (mypy), test (pytest --cov)
-  - Generate check: regenerate stubs, `git diff --exit-code` to catch stale stubs
-- [ ] Add repo to existing OpenDecree GitHub Project (same board as main repo)
-  - Add auto-add workflow for issues/PRs from `decree-python`
+- [x] Create repo `zeevdr/decree-python`
+- [x] `sdk/pyproject.toml` with setuptools, minimal deps (grpcio + protobuf)
+- [x] `Makefile` with targets: generate, lint, format, typecheck, test, build (Docker-based)
+- [x] Proto generation: fetch from BSR, generate with grpcio-tools + mypy-protobuf
+- [x] Commit generated stubs to `sdk/src/opendecree/_generated/`
+- [x] `.gitattributes`, `.python-version`, `py.typed`
+- [x] Empty `__init__.py` with version + public API stubs
+- [x] CI workflow: `.github/workflows/ci.yml` (3.11/3.12/3.13, lint+typecheck+test)
+- [x] Publish workflow: `.github/workflows/publish.yml` (OIDC trusted publishing)
 
-### Phase 2: ConfigClient — sync (days 2-3)
+### Phase 2: ConfigClient — sync — COMPLETE (2026-04-10)
 
-- [ ] `_channel.py` — channel factory (insecure/TLS, keepalive options)
-- [ ] `_interceptors.py` — auth metadata interceptor (sync)
-- [ ] `errors.py` — exception hierarchy + gRPC error mapping
-- [ ] `types.py` — ConfigValue, Change, ServerVersion dataclasses
-- [ ] `_retry.py` — exponential backoff with jitter
-- [ ] `_compat.py` — VersionService call + version comparison
-- [ ] `client.py` — ConfigClient with overloaded `get()`, context manager, `watch()` factory
-- [ ] Tests for all client methods (mock stubs)
-- [ ] Tests for error mapping, retry, interceptors
+- [x] `_channel.py` — channel factory (insecure/TLS, keepalive options)
+- [x] `_interceptors.py` — auth metadata interceptor (sync + async)
+- [x] `errors.py` — exception hierarchy + gRPC error mapping
+- [x] `types.py` — ConfigValue, Change, ServerVersion dataclasses
+- [x] `_retry.py` — exponential backoff with jitter (sync + async)
+- [x] `_convert.py` — TypedValue conversion (str, int, float, bool, timedelta)
+- [x] `_stubs.py` — lazy stub loading, shared response processing
+- [x] `client.py` — ConfigClient with overloaded `get()`, context manager, `watch()` factory
+- [x] Tests: client, errors, convert, retry, types (73 tests, 85% coverage)
 
-### Phase 3: AsyncConfigClient (day 4)
+Note: `_compat.py` (VersionService check) deferred — not blocking v0.1.0.
 
-- [ ] `_interceptors.py` — async auth interceptor
-- [ ] `async_client.py` — AsyncConfigClient (mirrors sync API)
-- [ ] Tests for async client
+### Phase 3: AsyncConfigClient — COMPLETE (2026-04-10)
 
-### Phase 4: ConfigWatcher — sync (days 5-6)
+- [x] `async_client.py` — AsyncConfigClient (mirrors sync API, per-call metadata)
+- [x] Tests for async client (69 tests, 84% coverage)
 
-- [ ] `watcher.py` — ConfigWatcher as context manager (via `client.watch()`)
-  - Generic `watcher.field(path, type, default)` → `WatchedField[T]`
-  - `.value` property (thread-safe, always-fresh)
-  - `__bool__` for natural conditionals
-  - Change callbacks via `@field.on_change`
-  - Blocking iterator via `field.changes()`
-  - Auto-start on `__enter__`, auto-stop on `__exit__`
-  - Auto-reconnect with backoff on stream failure
-- [ ] Tests for watcher lifecycle, reconnection, type conversion
+### Phase 4: ConfigWatcher — sync — COMPLETE (2026-04-10)
 
-### Phase 5: AsyncConfigWatcher (day 7)
+- [x] `watcher.py` — ConfigWatcher context manager via `client.watch()`
+  - WatchedField[T] with `.value`, `__bool__`, `on_change`, `changes()`
+  - Background thread with auto-reconnect and exponential backoff
+  - Initial snapshot loading before subscription
+- [x] Tests for watcher lifecycle, reconnection, type conversion (91 tests, 86% coverage)
 
-- [ ] `async_watcher.py` — AsyncConfigWatcher as async context manager
-  - Same `WatchedField[T]` API (`.value`, `__bool__`, `on_change`)
-  - `async for change in field.changes()` — async iterator
-  - Auto-start on `__aenter__`, auto-stop on `__aexit__`
-- [ ] Tests for async watcher
+### Phase 5: AsyncConfigWatcher — CODE COMPLETE, UNCOMMITTED
 
-### Phase 6: Docs + Distribution (day 8)
+- [x] `async_watcher.py` — AsyncConfigWatcher async context manager
+  - AsyncWatchedField[T] with `.value`, `__bool__`, `on_change`, async `changes()`
+  - Background asyncio task with auto-reconnect
+- [x] `test_async_watcher.py` — tests written (224 lines)
+- [ ] **Commit and push** (files are written but session crashed before commit)
 
-- [ ] `README.md` — install, quickstart, link to docs
+### Phase 6: Docs + Distribution — IN PROGRESS
+
+- [x] `README.md` — install, quickstart, link to docs
+- [x] Publish workflow configured (`.github/workflows/publish.yml`, OIDC)
 - [ ] `docs/quickstart.md` — first get/set in <5 min
 - [ ] `docs/configuration.md` — all client options
 - [ ] `docs/watching.md` — watcher patterns
 - [ ] `docs/async.md` — async usage guide
 - [ ] `CHANGELOG.md` — v0.1.0 entry
-- [ ] PyPI trusted publisher setup (OIDC — add pending publisher on pypi.org)
-- [ ] Publish workflow: `.github/workflows/publish.yml`
-  - Trigger: push tag `v*.*.*`
-  - Runs CI first (lint + test), then builds sdist + wheel, publishes via `pypa/gh-action-pypi-publish`
-  - Permissions: `id-token: write` for OIDC, environment: `pypi`
+- [ ] PyPI trusted publisher setup (add pending publisher on pypi.org)
 - [ ] Tag v0.1.0, verify PyPI publish + `pip install opendecree` works
 
 ## Key Decisions
