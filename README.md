@@ -50,46 +50,63 @@ No existing open-source tool combines a schema-first approach to typed configura
 
 ## SDKs
 
-Three Go SDK packages, each an independent module:
+| Language | Package | Install |
+|----------|---------|---------|
+| **Go** | 4 modules | `go get github.com/zeevdr/decree/sdk/configclient@latest` |
+| **Python** | [`opendecree`](https://pypi.org/project/opendecree/) | `pip install opendecree` |
+| **TypeScript** | [`@opendecree/sdk`](https://www.npmjs.com/package/@opendecree/sdk) | `npm install @opendecree/sdk` |
+
+### Go
 
 ```go
 // configclient — application runtime reads and writes
 client := configclient.New(rpc, configclient.WithSubject("myapp"))
 val, _ := client.GetInt(ctx, tenantID, "payments.retries")
-client.SetBool(ctx, tenantID, "payments.enabled", true)
-
-// Snapshot for consistent reads within a flow
-snap, _ := client.Snapshot(ctx, tenantID)
-fee, _ := snap.Get(ctx, "payments.fee")
-currency, _ := snap.Get(ctx, "payments.currency")
-
-// Optimistic concurrency (compare-and-swap)
-client.Update(ctx, tenantID, "counter", func(current string) (string, error) {
-    n, _ := strconv.Atoi(current)
-    return strconv.Itoa(n + 1), nil
-})
-
-// adminclient — schema, tenant, audit management
-admin := adminclient.New(schemaSvc, configSvc, auditSvc)
-schema, _ := admin.CreateSchema(ctx, "payments", fields, "")
-admin.PublishSchema(ctx, schema.ID, 1)
 
 // configwatcher — live typed values with auto-reconnect
 w := configwatcher.New(conn, tenantID)
 fee := w.Float("payments.fee", 0.01)
-enabled := w.Bool("payments.enabled", false)
 w.Start(ctx)
-fmt.Println(fee.Get())       // always fresh
-for change := range fee.Changes() { ... }
+fmt.Println(fee.Get()) // always fresh
 ```
 
-Install only what you need:
 ```bash
 go get github.com/zeevdr/decree/sdk/configclient@latest
 go get github.com/zeevdr/decree/sdk/adminclient@latest
 go get github.com/zeevdr/decree/sdk/configwatcher@latest
 go get github.com/zeevdr/decree/sdk/tools@latest         # diff, docgen, validate, seed, dump
 ```
+
+### Python
+
+```python
+from opendecree import ConfigClient
+
+with ConfigClient("localhost:9090", subject="myapp") as client:
+    retries = client.get("tenant-id", "payments.retries", int)
+
+    with client.watch("tenant-id") as watcher:
+        fee = watcher.field("payments.fee", float, default=0.01)
+        print(fee.value)  # always fresh
+```
+
+Docs: [decree-python](https://github.com/zeevdr/decree-python)
+
+### TypeScript
+
+```typescript
+import { ConfigClient } from "@opendecree/sdk";
+
+const client = new ConfigClient("localhost:9090", { subject: "myapp" });
+const retries = await client.get("tenant-id", "payments.retries", Number);
+
+const watcher = client.watch("tenant-id");
+const fee = watcher.field("payments.fee", Number, { default: 0.01 });
+await watcher.start();
+console.log(fee.value); // always fresh
+```
+
+Docs: [decree-typescript](https://github.com/zeevdr/decree-typescript)
 
 ## CLI
 
@@ -189,22 +206,29 @@ decree config get-all <tenant-id>
 ## Architecture
 
 ```
-┌──────────┐     gRPC      ┌────────────────────────┐
-│  Clients ├──────────────►│      OpenDecree        │
-└──────────┘               │                        │
-                           │  ┌── SchemaService     │
-                           │  ├── ConfigService     │
-                           │  └── AuditService      │
-                           └───┬──────────┬─────────┘
-                               │          │
-                          ┌────▼───┐  ┌───▼────┐
-                          │ Postgres│  │ Redis  │
-                          │        │  │ Cache + │
-                          │        │  │ Pub/Sub │
-                          └────────┘  └────────┘
+┌───────────────────┐
+│      Clients      │
+│  Go · Python · TS │
+│  CLI · REST · gRPC│
+└────────┬──────────┘
+         │ gRPC / REST (grpc-gateway)
+┌────────▼──────────────────────────┐
+│           OpenDecree              │
+│                                   │
+│  SchemaService · ConfigService    │
+│  AuditService  · VersionService   │
+│                                   │
+│  ┌─────────────────────────────┐  │
+│  │    Pluggable Backends       │  │
+│  │  Storage: Postgres | Memory │  │
+│  │  Cache:   Redis    | Memory │  │
+│  │  PubSub:  Redis    | Memory │  │
+│  │  OTel:    opt-in             │  │
+│  └─────────────────────────────┘  │
+└───────────────────────────────────┘
 ```
 
-Single binary exposing three gRPC services. Deploy with `ENABLE_SERVICES` to control which services run on each instance — scale read-heavy config instances independently from schema management.
+Single binary exposing three gRPC services + REST/JSON gateway. All external dependencies (storage, cache, pub/sub) are behind Go interfaces — swap implementations via `STORAGE_BACKEND=memory` for zero-dependency evaluation or testing. Deploy with `ENABLE_SERVICES` to control which services run on each instance.
 
 ## Configuration
 
@@ -215,9 +239,9 @@ Single binary exposing three gRPC services. Deploy with `ENABLE_SERVICES` to con
 | `GRPC_PORT` | gRPC listen port | `9090` |
 | `HTTP_PORT` | REST/JSON gateway port (disabled if empty) | disabled |
 | `STORAGE_BACKEND` | `postgres` or `memory` | `postgres` |
-| `DB_WRITE_URL` | PostgreSQL primary connection string | required (postgres) |
+| `DB_WRITE_URL` | PostgreSQL primary connection string | required if postgres |
 | `DB_READ_URL` | PostgreSQL read replica connection string | `DB_WRITE_URL` |
-| `REDIS_URL` | Redis connection string | required |
+| `REDIS_URL` | Redis connection string | required if postgres |
 | `ENABLE_SERVICES` | Services to enable: `schema`, `config`, `audit` | all |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | `info` |
 
@@ -253,13 +277,21 @@ Standard OTel variables (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) are
 
 ## API
 
-The API is defined in Protocol Buffers under [`proto/`](proto/). Three gRPC services:
+The API is defined in Protocol Buffers under [`proto/`](proto/), published to BSR at [`buf.build/opendecree/decree`](https://buf.build/opendecree/decree). Three gRPC services:
 
 - **SchemaService** — create, version, and manage config schemas and tenants
 - **ConfigService** — read/write typed config values, subscribe to changes, version management
 - **AuditService** — query change history and usage statistics
 
 Values use a `TypedValue` oneof — integer, number, string, bool, timestamp, duration, url, json — with null support.
+
+Generate client stubs in any language from BSR, or use the official SDKs:
+
+| | Repo | Package |
+|---|------|---------|
+| Go | [this repo](sdk/) | `github.com/zeevdr/decree/sdk/*` |
+| Python | [decree-python](https://github.com/zeevdr/decree-python) | [`opendecree`](https://pypi.org/project/opendecree/) |
+| TypeScript | [decree-typescript](https://github.com/zeevdr/decree-typescript) | [`@opendecree/sdk`](https://www.npmjs.com/package/@opendecree/sdk) |
 
 ## Test Coverage
 
