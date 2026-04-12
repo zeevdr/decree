@@ -1,7 +1,8 @@
 # TypeScript SDK (`@opendecree/sdk`)
 
-**Status:** Planning
+**Status:** Complete
 **Started:** 2026-04-12
+**Completed:** 2026-04-12
 **Repo:** `zeevdr/decree-typescript`
 **npm:** `@opendecree/sdk` (org: `opendecree`)
 **Node.js:** 20+

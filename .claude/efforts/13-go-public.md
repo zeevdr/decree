@@ -17,7 +17,7 @@ Secret scan, LICENSE, README review, module paths, git history, GitHub settings,
 - [x] **In-memory storage** — `STORAGE_BACKEND=memory` for zero-dep evaluation
 - [x] **GitHub Project** — roadmap board with issues from efforts
 - [ ] **Admin GUI** (effort 17) — web UI for config/schema management (alpha)
-- [ ] **TypeScript SDK** (effort 18) — npm package with thin wrapper
+- [x] **TypeScript SDK** (effort 23) — @opendecree/sdk v0.1.0 on npm, 139 tests/98% cov
 - [x] **Python SDK** (effort 18) — code complete, 150 tests/98% cov, awaiting PyPI publish
 - [ ] **Examples repo** (effort 19) — runnable examples per language
 - [ ] **Final README update** — add GUI/SDK sections when ready
