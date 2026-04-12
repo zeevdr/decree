@@ -1,6 +1,6 @@
 # Python SDK (`opendecree`)
 
-**Status:** In Progress (Phases 1–4 complete, Phase 5 uncommitted, Phase 6 partial)
+**Status:** Code complete — awaiting PyPI publish + branch protection
 **Started:** 2026-04-10
 **Last Updated:** 2026-04-12
 **Repo:** `zeevdr/decree-python`
@@ -407,25 +407,29 @@ Note: `_compat.py` (VersionService check) deferred — not blocking v0.1.0.
   - Initial snapshot loading before subscription
 - [x] Tests for watcher lifecycle, reconnection, type conversion (91 tests, 86% coverage)
 
-### Phase 5: AsyncConfigWatcher — CODE COMPLETE, UNCOMMITTED
+### Phase 5: AsyncConfigWatcher — COMPLETE (2026-04-12)
 
 - [x] `async_watcher.py` — AsyncConfigWatcher async context manager
   - AsyncWatchedField[T] with `.value`, `__bool__`, `on_change`, async `changes()`
   - Background asyncio task with auto-reconnect
-- [x] `test_async_watcher.py` — tests written (224 lines)
-- [ ] **Commit and push** (files are written but session crashed before commit)
+- [x] `test_async_watcher.py` — 16 tests
+- [x] Fix: reconnect backoff on normal stream end, CI deps + mypy fixes
 
-### Phase 6: Docs + Distribution — IN PROGRESS
+### Phase 6: Docs + Distribution — COMPLETE (2026-04-12, manual steps remain)
 
-- [x] `README.md` — install, quickstart, link to docs
+- [x] `README.md` — badges (CI, PyPI, Python, license), install, quickstart
 - [x] Publish workflow configured (`.github/workflows/publish.yml`, OIDC)
-- [ ] `docs/quickstart.md` — first get/set in <5 min
-- [ ] `docs/configuration.md` — all client options
-- [ ] `docs/watching.md` — watcher patterns
-- [ ] `docs/async.md` — async usage guide
-- [ ] `CHANGELOG.md` — v0.1.0 entry
-- [ ] PyPI trusted publisher setup (add pending publisher on pypi.org)
-- [ ] Tag v0.1.0, verify PyPI publish + `pip install opendecree` works
+- [x] `docs/quickstart.md` — install, typed reads, watch, error handling
+- [x] `docs/configuration.md` — all client options (auth, TLS, retry, errors)
+- [x] `docs/watching.md` — WatchedField[T], callbacks, iterators, reconnect
+- [x] `docs/async.md` — async client + watcher, sync vs async comparison
+- [x] `CHANGELOG.md` — v0.1.0 entry
+- [x] Governance: SECURITY.md, CODE_OF_CONDUCT.md, CONTRIBUTING.md
+- [x] GitHub templates: bug report, feature request, PR template
+- [x] PyPI keywords in pyproject.toml
+- [ ] **PyPI trusted publisher setup** (add pending publisher on pypi.org + GitHub Environment)
+- [ ] **Branch protection on main** (require PR + CI checks)
+- [ ] **Tag v0.1.0** → triggers PyPI publish
 
 ## Key Decisions
 
