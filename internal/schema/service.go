@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/auth"
 	"github.com/zeevdr/decree/internal/storage/domain"
 	"github.com/zeevdr/decree/internal/telemetry"
 	"github.com/zeevdr/decree/internal/validation"
@@ -21,6 +22,15 @@ var uuidRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 // validUUID checks whether s is a valid UUID string.
 func validUUID(s string) bool {
 	return uuidRe.MatchString(s)
+}
+
+func containsStr(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // Service implements the SchemaService gRPC server.
@@ -323,6 +333,9 @@ func (s *Service) GetTenant(ctx context.Context, req *pb.GetTenantRequest) (*pb.
 	if !validUUID(req.Id) {
 		return nil, status.Error(codes.InvalidArgument, "invalid tenant id")
 	}
+	if err := auth.CheckTenantAccess(ctx, req.Id); err != nil {
+		return nil, err
+	}
 
 	tenant, err := s.store.GetTenantByID(ctx, req.Id)
 	if err != nil {
@@ -365,8 +378,13 @@ func (s *Service) ListTenants(ctx context.Context, req *pb.ListTenantsRequest) (
 		return nil, status.Error(codes.Internal, "failed to list tenants")
 	}
 
+	// Filter by caller's allowed tenants (non-superadmin only see their own).
+	allowedIDs := auth.AllowedTenantIDs(ctx)
 	pbTenants := make([]*pb.Tenant, 0, len(tenants))
 	for _, t := range tenants {
+		if allowedIDs != nil && !containsStr(allowedIDs, t.ID) {
+			continue
+		}
 		pbTenants = append(pbTenants, tenantToProto(t))
 	}
 
@@ -378,6 +396,9 @@ func (s *Service) ListTenants(ctx context.Context, req *pb.ListTenantsRequest) (
 func (s *Service) UpdateTenant(ctx context.Context, req *pb.UpdateTenantRequest) (*pb.UpdateTenantResponse, error) {
 	if !validUUID(req.Id) {
 		return nil, status.Error(codes.InvalidArgument, "invalid tenant id")
+	}
+	if err := auth.CheckTenantAccess(ctx, req.Id); err != nil {
+		return nil, err
 	}
 
 	var tenant domain.Tenant
@@ -437,6 +458,9 @@ func (s *Service) UpdateTenant(ctx context.Context, req *pb.UpdateTenantRequest)
 func (s *Service) DeleteTenant(ctx context.Context, req *pb.DeleteTenantRequest) (*pb.DeleteTenantResponse, error) {
 	if !validUUID(req.Id) {
 		return nil, status.Error(codes.InvalidArgument, "invalid tenant id")
+	}
+	if err := auth.CheckTenantAccess(ctx, req.Id); err != nil {
+		return nil, err
 	}
 
 	if err := s.store.DeleteTenant(ctx, req.Id); err != nil {
