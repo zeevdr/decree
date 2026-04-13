@@ -159,6 +159,15 @@ func (s *PGStore) CreateSchemaField(ctx context.Context, arg CreateSchemaFieldPa
 		RedirectTo:      arg.RedirectTo,
 		DefaultValue:    arg.DefaultValue,
 		Description:     arg.Description,
+		Title:           arg.Title,
+		Example:         arg.Example,
+		Examples:        arg.Examples,
+		ExternalDocs:    arg.ExternalDocs,
+		Tags:            arg.Tags,
+		Format:          arg.Format,
+		ReadOnly:        arg.ReadOnly,
+		WriteOnce:       arg.WriteOnce,
+		Sensitive:       arg.Sensitive,
 	})
 	if err != nil {
 		return domain.SchemaField{}, err
@@ -370,6 +379,15 @@ func schemaFieldFromDB(r dbstore.SchemaField) domain.SchemaField {
 		RedirectTo:      r.RedirectTo,
 		DefaultValue:    r.DefaultValue,
 		Description:     r.Description,
+		Title:           r.Title,
+		Example:         r.Example,
+		Examples:        r.Examples,
+		ExternalDocs:    r.ExternalDocs,
+		Tags:            r.Tags,
+		Format:          r.Format,
+		ReadOnly:        r.ReadOnly,
+		WriteOnce:       r.WriteOnce,
+		Sensitive:       r.Sensitive,
 	}
 }
 

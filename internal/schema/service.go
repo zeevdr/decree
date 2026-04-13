@@ -683,6 +683,14 @@ func (s *Service) createFields(ctx context.Context, versionID string, fields []*
 		if f.Constraints != nil {
 			constraints, _ = json.Marshal(f.Constraints)
 		}
+		var examples []byte
+		if len(f.Examples) > 0 {
+			examples, _ = json.Marshal(f.Examples)
+		}
+		var externalDocs []byte
+		if f.ExternalDocs != nil {
+			externalDocs, _ = json.Marshal(f.ExternalDocs)
+		}
 
 		dbField, err := s.store.CreateSchemaField(ctx, CreateSchemaFieldParams{
 			SchemaVersionID: versionID,
@@ -694,6 +702,15 @@ func (s *Service) createFields(ctx context.Context, versionID string, fields []*
 			RedirectTo:      f.RedirectTo,
 			DefaultValue:    f.DefaultValue,
 			Description:     f.Description,
+			Title:           f.Title,
+			Example:         f.Example,
+			Examples:        examples,
+			ExternalDocs:    externalDocs,
+			Tags:            f.Tags,
+			Format:          f.Format,
+			ReadOnly:        f.ReadOnly,
+			WriteOnce:       f.WriteOnce,
+			Sensitive:       f.Sensitive,
 		})
 		if err != nil {
 			s.logger.ErrorContext(ctx, "create schema field", "path", f.Path, "error", err)

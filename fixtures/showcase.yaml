@@ -14,6 +14,14 @@
 #   title, description, example, examples, format, externalDocs,
 #   tags, readOnly, writeOnce, sensitive, deprecated + redirectTo
 #
+# Paths vs tags:
+#   Path prefixes give structural hierarchy (e.g. payments.*, settlement.*).
+#   Tags give cross-cutting categories (e.g. [payments], [integrations]).
+#   These are independent — a field's tag does NOT have to match its path
+#   prefix. For example, api.webhook_url is tagged [integrations], not [api].
+#   This fixture mostly aligns them for simplicity, but real schemas often
+#   tag fields across multiple path groups.
+#
 # Load: decree seed fixtures/showcase.yaml
 
 syntax: v1
