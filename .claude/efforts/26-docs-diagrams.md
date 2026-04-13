@@ -1,7 +1,8 @@
 # Documentation Diagrams
 
-**Status:** Planning
+**Status:** Phase 1 complete, Phase 2 skipped, Phase 3 open
 **Started:** 2026-04-13
+**Updated:** 2026-04-13
 
 ---
 
@@ -17,23 +18,20 @@ Add Mermaid diagrams to documentation where visual representation improves under
 
 ## Diagram Opportunities
 
-### Phase 1: Replace existing ASCII art (high value)
+### Phase 1: Replace existing ASCII art — DONE (#114)
 
-| Doc | Current | Diagram Type |
-|-----|---------|-------------|
-| concepts/schemas-and-fields.md | ASCII lifecycle `Create → Update → Publish → Assign` | `stateDiagram` — draft/published states, immutability |
-| concepts/overview.md | ASCII flow `Schema → Tenant → Config → Subscribe` | `flowchart` — core workflow + architecture |
-| concepts/subscriptions.md | ASCII write → storage → pub/sub → stream | `sequenceDiagram` — change propagation |
-| concepts/versioning.md | Text-based version delta examples | `flowchart` — delta resolution stacking |
-| concepts/tenants.md | ASCII tree of schema → versions → tenants | `erDiagram` or `graph` — entity relationships |
+All 5 ASCII diagrams replaced with Mermaid:
+- schemas-and-fields.md — `stateDiagram` for lifecycle
+- overview.md — `flowchart` for mental model + architecture (with separated Storage, Cache, Pub/Sub backends)
+- subscriptions.md — `sequenceDiagram` for change propagation
+- versioning.md — `flowchart` for delta resolution
+- tenants.md — `graph` with distinct node shapes per entity type
 
-### Phase 2: Add new diagrams (missing visuals)
+Also refreshed: added multi-tenant access control to tenants.md, auth mention in architecture overview.
 
-| Doc | Concept | Diagram Type |
-|-----|---------|-------------|
-| concepts/auth.md | Auth flow: request → extract claims → role check → access | `flowchart` — decision tree |
-| server/deployment.md | Docker Compose topology: app → PG + Redis | `graph` — deployment architecture |
-| server/observability.md | Nested trace spans: gRPC → Redis → DB | `sequenceDiagram` — span hierarchy |
+### Phase 2: Skipped — not needed (#103 closed)
+
+Reviewed auth.md, deployment.md, and observability.md. These are reference-style docs where tables and code blocks communicate better than diagrams. Forcing Mermaid here would just restate the tables in a worse format.
 
 ### Phase 3: Nice to have
 
