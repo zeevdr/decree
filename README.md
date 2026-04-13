@@ -20,6 +20,8 @@
 
 <p align="center">Schema-driven business configuration management for multi-tenant services.</p>
 
+> **Alpha Software** — OpenDecree is under active development. APIs, proto definitions, configuration formats, and behavior may change without notice between versions. Not recommended for production use yet.
+
 ## What is this?
 
 OpenDecree manages **business-oriented configuration** — approval rules, fee structures, settlement windows, feature parameters — the kind of config that lives between your infrastructure settings and your application code.
