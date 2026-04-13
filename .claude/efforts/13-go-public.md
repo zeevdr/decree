@@ -1,7 +1,8 @@
 # Go Public Checklist
 
-**Status:** In Progress (pre-launch items remaining)
+**Status:** Near complete (Admin GUI + examples remaining)
 **Started:** 2026-03-29
+**Updated:** 2026-04-13
 
 ---
 
