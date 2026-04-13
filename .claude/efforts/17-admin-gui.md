@@ -1,6 +1,6 @@
 # Admin GUI
 
-**Status:** In Progress (Phases 1-3 complete, Phase 4 next)
+**Status:** In Progress (Phases 1-4 complete, Phase 5 next)
 **Started:** 2026-04-09
 **Last Updated:** 2026-04-13
 **Repo:** `zeevdr/decree-ui`
@@ -246,12 +246,15 @@ decree-ui/
 - [x] Tenant create form with schema selector
 - [x] Tenant detail + delete with confirmation
 
-### Phase 4: Config editor (core)
-- [ ] Config editor with type-aware inputs
-- [ ] Schema constraint hints on inputs
-- [ ] Two-phase edit: dirty tracking + pending changes panel
-- [ ] Atomic submit via SetFields
-- [ ] Field lock indicators + toggle
+### Phase 4: Config editor (core) — COMPLETE (2026-04-13)
+- [x] Config editor merged into tenant detail (read-only by default, edit mode toggle)
+- [x] Type-aware inputs: string, int, number, bool toggle, duration, time, url, json, enum dropdown
+- [x] Two-phase edit: dirty tracking + pending changes review panel + atomic submit
+- [x] Field lock indicators + lock/unlock toggle
+- [x] Role-based permissions (hide Edit/Delete/locks per role)
+- [x] Customization: config/labels.json + config/theme.json for white-labeling
+- [x] Duration display formatting (86400s → 24h)
+- [x] Playwright screenshot tooling
 
 ### Phase 5: Config history
 - [ ] Version list with timestamps
