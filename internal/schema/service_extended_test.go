@@ -348,7 +348,7 @@ func TestUpdateTenant_NoFieldsUpdated_NotFound(t *testing.T) {
 
 func TestUpdateTenant_SchemaVersionInvalidatesCache(t *testing.T) {
 	store := &mockStore{}
-	cache := validation.NewValidatorCache()
+	cache := validation.NewValidatorCache(0)
 	svc := NewService(store, testLogger, nil, cache)
 
 	newVersion := int32(2)
