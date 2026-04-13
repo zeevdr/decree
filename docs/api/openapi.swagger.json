@@ -2154,7 +2154,7 @@
         },
         "name": {
           "type": "string",
-          "description": "Unique name for this schema. Must be a valid slug: lowercase alphanumeric\ncharacters and hyphens, 1-63 characters, matching [a-z0-9]([a-z0-9-]*[a-z0-9])?."
+          "description": "Machine identifier for this schema, used in API calls, URLs, and code.\nMust be a unique slug: lowercase alphanumeric and hyphens, 1-63 characters,\nmatching [a-z0-9]([a-z0-9-]*[a-z0-9])?. See info.title for a display name."
         },
         "description": {
           "type": "string",
@@ -2305,7 +2305,7 @@
       "properties": {
         "title": {
           "type": "string",
-          "title": "Human-friendly display title for the schema.\nOAS: info.title"
+          "title": "Human-friendly display name (e.g. \"Payment Configuration\").\nUnlike Schema.name (a machine slug), this is for UI and documentation.\nOAS: info.title"
         },
         "author": {
           "type": "string",
@@ -2323,7 +2323,7 @@
           "description": "Key-value labels for filtering and categorization."
         }
       },
-      "title": "SchemaInfo contains optional metadata about a schema's ownership and context.\nOAS: Info Object"
+      "title": "SchemaInfo contains optional metadata about a schema's ownership and context.\nOptional organizational metadata for a schema.\nSchema.description lives on Schema itself (not here) because it's a\nfirst-class field used in every listing, while these are optional extras.\nOAS: Info Object"
     },
     "v1SetFieldResponse": {
       "type": "object",

@@ -221,6 +221,15 @@ func (m *MemoryStore) CreateSchemaField(_ context.Context, arg CreateSchemaField
 		RedirectTo:      arg.RedirectTo,
 		DefaultValue:    arg.DefaultValue,
 		Description:     arg.Description,
+		Title:           arg.Title,
+		Example:         arg.Example,
+		Examples:        arg.Examples,
+		ExternalDocs:    arg.ExternalDocs,
+		Tags:            arg.Tags,
+		Format:          arg.Format,
+		ReadOnly:        arg.ReadOnly,
+		WriteOnce:       arg.WriteOnce,
+		Sensitive:       arg.Sensitive,
 	}
 	m.schemaFields[arg.SchemaVersionID] = append(m.schemaFields[arg.SchemaVersionID], f)
 	return f, nil

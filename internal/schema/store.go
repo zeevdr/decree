@@ -44,6 +44,15 @@ type CreateSchemaFieldParams struct {
 	RedirectTo      *string
 	DefaultValue    *string
 	Description     *string
+	Title           *string
+	Example         *string
+	Examples        []byte
+	ExternalDocs    []byte
+	Tags            []string
+	Format          *string
+	ReadOnly        bool
+	WriteOnce       bool
+	Sensitive       bool
 }
 
 // DeleteSchemaFieldParams identifies a field to delete.
