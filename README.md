@@ -207,27 +207,38 @@ decree config get-all <tenant-id>
 
 ## Architecture
 
-```
-┌───────────────────┐
-│      Clients      │
-│  Go · Python · TS │
-│  CLI · REST · gRPC│
-└────────┬──────────┘
-         │ gRPC / REST (grpc-gateway)
-┌────────▼──────────────────────────┐
-│           OpenDecree              │
-│                                   │
-│  SchemaService · ConfigService    │
-│  AuditService  · VersionService   │
-│                                   │
-│  ┌─────────────────────────────┐  │
-│  │    Pluggable Backends       │  │
-│  │  Storage: Postgres | Memory │  │
-│  │  Cache:   Redis    | Memory │  │
-│  │  PubSub:  Redis    | Memory │  │
-│  │  OTel:    opt-in             │  │
-│  └─────────────────────────────┘  │
-└───────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Clients
+        direction TB
+        SDKs["🔧 SDKs\nGo · Python · TypeScript"]
+        CLI[">_ CLI\ndecree"]
+        UI["🖥️ Admin UI\ndecree-ui"]
+        Direct["🔗 Direct\ncurl, custom"]
+    end
+
+    SDKs & CLI -->|gRPC| GW
+    UI & Direct -->|REST| GW
+
+    GW{{"🔐 Gateway\nauth · routing"}}
+
+    subgraph Server["⚙️ OpenDecree"]
+        SS["📋 SchemaService\nschemas, tenants"]
+        CS["📝 ConfigService\nread, write, subscribe"]
+        AS["📊 AuditService\nhistory, usage"]
+    end
+
+    GW --> SS & CS & AS
+
+    subgraph Backends["💾 Pluggable Backends"]
+        Storage[("Storage")]
+        Cache[("Cache")]
+        PubSub[("Pub/Sub")]
+    end
+
+    SS & CS & AS --> Storage
+    CS --> Cache
+    CS <--> PubSub
 ```
 
 Single binary exposing three gRPC services + REST/JSON gateway. All external dependencies (storage, cache, pub/sub) are behind Go interfaces — swap implementations via `STORAGE_BACKEND=memory` for zero-dependency evaluation or testing. Deploy with `ENABLE_SERVICES` to control which services run on each instance.
