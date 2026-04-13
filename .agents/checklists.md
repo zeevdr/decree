@@ -27,7 +27,7 @@ Standard checklists for Claude to follow at each stage of the development workfl
 - [ ] OpenAPI spec in sync: `cmd/server/openapi.json` matches `docs/api/openapi.swagger.json`
 - [ ] Coverage didn't drop — if it did, add tests or adjust threshold with justification
 - [ ] Update coverage badge if changed: `./scripts/coverage.sh` (server), update README badge
-- [ ] Effort docs updated if relevant (`.claude/efforts/`)
+- [ ] Agent context updated if relevant (`.agents/context/`)
 - [ ] PR description includes Summary, Test plan
 - [ ] No TODO/FIXME introduced without a corresponding GitHub issue
 
@@ -36,13 +36,13 @@ Standard checklists for Claude to follow at each stage of the development workfl
 - [ ] Switch to main: `git checkout main && git pull --rebase`
 - [ ] Delete local branch: `git branch -d <branch>`
 - [ ] Verify CI passed on main (check GitHub Actions)
-- [ ] Update effort docs if task is complete
+- [ ] Update agent context if task completes a milestone item
 
 ## Before Release Tag
 
 - [ ] All CI checks pass on main (lint, test, build, docs, e2e)
-- [ ] Effort docs archived: completed items moved to `completed.md`
-- [ ] Wishlist cleaned: done items removed, new items added
+- [ ] All milestone issues closed or deferred to next milestone
+- [ ] Agent context updated: design summaries in `.agents/context/completed.md`
 - [ ] `go.mod` versions consistent across all modules
 - [ ] README accurate: features, install commands, env vars, architecture
 - [ ] CONTRIBUTING accurate: project structure, module layout
@@ -84,17 +84,18 @@ Standard checklists for Claude to follow at each stage of the development workfl
 - [ ] pkg.go.dev shows new version (may take a few minutes)
 - [ ] Version endpoint reports correct version (once Docker version fix is in)
 - [ ] Edit release notes if needed: `gh release edit v{X.Y.Z} --notes "..."`
+- [ ] Milestone auto-closed by CI (verify)
 
-## Effort Lifecycle
+## Milestone Lifecycle
+
+Milestones represent efforts (e.g. "Admin GUI", "Security Review"), not releases.
 
 When starting a new effort:
-1. Create effort doc in `.claude/efforts/{NN}-{name}.md`
-2. Create GitHub issue with `effort` label
-3. Add issue to project board
+1. Create milestone on GitHub with effort name and description
+2. Create issues for each work item and assign to milestone
+3. If the work has significant design context, create a doc in `.agents/context/`
 
 When completing an effort:
-1. Mark all items [x] in effort doc
-2. Set status to **Complete**
-3. Move summary to `completed.md`
-4. Close GitHub issue
-5. Update wishlist if items were from there
+1. Verify all issues are closed
+2. Move design context summaries to `.agents/context/completed.md`
+3. Close the milestone
