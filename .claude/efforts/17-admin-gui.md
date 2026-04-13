@@ -1,7 +1,8 @@
 # Admin GUI
 
-**Status:** Planning
+**Status:** In Progress (Phases 1-3 complete, Phase 4 next)
 **Started:** 2026-04-09
+**Last Updated:** 2026-04-13
 **Repo:** `zeevdr/decree-ui`
 
 ---
@@ -222,26 +223,28 @@ decree-ui/
 
 ## Implementation Phases
 
-### Phase 1: Scaffold + API client + auth bar
-- [ ] Create repo `zeevdr/decree-ui`
-- [ ] Vite + React + React Router + TanStack Query + Tailwind
-- [ ] Generate API types from OpenAPI spec (openapi-typescript)
-- [ ] API client with configurable base URL and auth headers
-- [ ] Dev-mode auth bar (subject input + role dropdown)
-- [ ] Layout shell (sidebar + header + content area)
-- [ ] CI workflow (lint, typecheck, test, build)
-- [ ] Dark mode (system preference via Tailwind)
+### Phase 1: Scaffold + API client + auth bar — COMPLETE (2026-04-12)
+- [x] Create repo `zeevdr/decree-ui`
+- [x] Vite + React + React Router + TanStack Query + Tailwind
+- [x] Generate API types from OpenAPI spec (openapi-typescript + swagger2openapi)
+- [x] API client with auth header injection (openapi-fetch)
+- [x] Dev-mode auth bar (subject/role from constants, persisted)
+- [x] Layout shell (sidebar + header + content area)
+- [x] CI workflow (lint, typecheck, test, build)
+- [x] Dark mode (class-based toggle, system preference default)
+- [x] Icons and constants extracted to dedicated modules
 
-### Phase 2: Schema pages
-- [ ] Schema list with search
-- [ ] Schema detail (fields table, version list)
-- [ ] Schema import (YAML textarea + preview)
-- [ ] Schema export (YAML download)
+### Phase 2: Schema pages — COMPLETE (2026-04-13)
+- [x] Schema list with search filter, published/draft badges
+- [x] Schema detail: type badges, collapsible fields, path-prefix grouping
+- [x] Schema detail: description column, deprecated badge, field count, info block
+- [x] Schema import (YAML textarea + auto-publish)
+- [x] Schema export (YAML download)
 
-### Phase 3: Tenant pages
-- [ ] Tenant list with schema filter
-- [ ] Tenant create form
-- [ ] Tenant detail + delete
+### Phase 3: Tenant pages — COMPLETE (2026-04-13)
+- [x] Tenant list with name filter, schema info
+- [x] Tenant create form with schema selector
+- [x] Tenant detail + delete with confirmation
 
 ### Phase 4: Config editor (core)
 - [ ] Config editor with type-aware inputs
