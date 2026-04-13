@@ -78,3 +78,8 @@ Systematically review and harden OpenDecree against common security threats. Cre
 3. **Tenant isolation** — multi-tenant auth just added (#95). Need exhaustive cross-tenant access tests.
 4. **ReDoS** — pattern constraints accept user-supplied regex. Need to evaluate timeout/complexity limits.
 5. **Sensitive fields** — the `sensitive` flag exists on schema fields but unclear if it affects any behavior.
+6. **Cache overflow (#107)** — three unbounded caches risk OOM:
+   - **MemoryCache** (internal/cache/memory.go): unbounded `map`, TTL checked only on read (no sweep), no size limit.
+   - **ValidatorCache** (internal/validation/cache.go): no TTL at all, grows with tenant count, only evicted on explicit schema update.
+   - **Redis**: docker-compose and Helm deploy with no `maxmemory` or eviction policy — Redis will OOM instead of evicting.
+   - Mitigations needed: max entry count or LRU for memory caches, background sweep for expired entries, Redis `maxmemory` + `allkeys-lru` in deployment configs.
