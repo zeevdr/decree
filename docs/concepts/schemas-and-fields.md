@@ -4,8 +4,14 @@ A **schema** defines the structure of a configuration — what fields exist, the
 
 ## Schema Lifecycle
 
-```
-Create (draft v1) → Update (draft v2, v3...) → Publish (immutable) → Assign to tenant
+```mermaid
+stateDiagram-v2
+    [*] --> Draft: Create schema
+    Draft --> Draft: Update fields
+    Draft --> Published: Publish version
+    Published --> Assigned: Assign to tenant
+    note right of Published: Immutable — fields\ncannot be changed
+    note right of Draft: New version created\non each update
 ```
 
 1. **Create** — define fields, types, and constraints. Creates version 1 as a draft.
