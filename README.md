@@ -127,7 +127,7 @@ decree lock set <tenant-id> payments.currency     # lock field
 decree audit query --tenant <tenant-id> --since 24h
 
 # Power tools
-decree seed environments/dev.yaml                 # bootstrap everything from one file
+decree seed fixtures/billing.yaml                 # bootstrap from a fixture
 decree dump <tenant-id> > backup.yaml             # full tenant backup
 decree diff <tenant-id> 1 2                       # diff two config versions
 decree diff --old v1.yaml --new v2.yaml           # diff two files
