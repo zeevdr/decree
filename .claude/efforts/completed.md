@@ -75,3 +75,11 @@ OAS-inspired metadata: schema-level info block (title, author, contact, labels),
 - **Man pages** — 43 pages via cobra/doc, Long descriptions for parent commands
 - **Docker layer caching** — GHA cache for main.yml and release.yml image builds
 - **configclient retry** — generic retry[T] with exponential backoff + jitter, opt-in via WithRetry()
+
+## Python SDK (effort 18)
+
+`opendecree` on PyPI (v0.1.0). Separate repo `zeevdr/decree-python`. ConfigClient (sync + async) with @overload typed get(), ConfigWatcher with WatchedField[T] (.value, on_change, changes()). Error hierarchy, retry with backoff, auth metadata, version compatibility. 171 tests, 97% coverage, 95% floor. Docs, governance, OIDC publishing.
+
+## TypeScript SDK (effort 23)
+
+`@opendecree/sdk` on npm (v0.1.0). Separate repo `zeevdr/decree-typescript`. ESM-only, async-only, Node 20+. ConfigClient with overloaded get() via runtime converters (Number, Boolean, String). ConfigWatcher with WatchedField<T> (EventEmitter, async iteration). Symbol.dispose support. @grpc/grpc-js + buf/ts-proto. Biome + vitest. 139 tests, 98% coverage, 95% floor. OIDC trusted publishing.
