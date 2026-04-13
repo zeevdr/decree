@@ -356,6 +356,9 @@ func (s *Service) ListTenants(ctx context.Context, req *pb.ListTenantsRequest) (
 		pageSize = 50
 	}
 
+	// Push tenant access filtering into the store so pagination is correct.
+	allowedIDs := auth.AllowedTenantIDs(ctx)
+
 	var tenants []domain.Tenant
 	var err error
 
@@ -364,27 +367,24 @@ func (s *Service) ListTenants(ctx context.Context, req *pb.ListTenantsRequest) (
 			return nil, status.Error(codes.InvalidArgument, "invalid schema id")
 		}
 		tenants, err = s.store.ListTenantsBySchema(ctx, ListTenantsBySchemaParams{
-			SchemaID: *req.SchemaId,
-			Limit:    pageSize,
-			Offset:   0,
+			SchemaID:         *req.SchemaId,
+			Limit:            pageSize,
+			Offset:           0,
+			AllowedTenantIDs: allowedIDs,
 		})
 	} else {
 		tenants, err = s.store.ListTenants(ctx, ListTenantsParams{
-			Limit:  pageSize,
-			Offset: 0,
+			Limit:            pageSize,
+			Offset:           0,
+			AllowedTenantIDs: allowedIDs,
 		})
 	}
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to list tenants")
 	}
 
-	// Filter by caller's allowed tenants (non-superadmin only see their own).
-	allowedIDs := auth.AllowedTenantIDs(ctx)
 	pbTenants := make([]*pb.Tenant, 0, len(tenants))
 	for _, t := range tenants {
-		if allowedIDs != nil && !containsStr(allowedIDs, t.ID) {
-			continue
-		}
 		pbTenants = append(pbTenants, tenantToProto(t))
 	}
 
