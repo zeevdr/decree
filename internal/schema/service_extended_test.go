@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "github.com/zeevdr/decree/api/centralconfig/v1"
+	"github.com/zeevdr/decree/internal/auth"
 	"github.com/zeevdr/decree/internal/storage/domain"
 	"github.com/zeevdr/decree/internal/validation"
 )
@@ -362,6 +363,86 @@ func TestUpdateTenant_SchemaVersionInvalidatesCache(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, newVersion, resp.Tenant.SchemaVersion)
+	store.AssertExpectations(t)
+}
+
+// --- ExportSchema ---
+
+// --- ListTenants with auth filtering ---
+
+func TestListTenants_SuperadminSeesAll(t *testing.T) {
+	store := &mockStore{}
+	svc := NewService(store, testLogger, nil, nil)
+
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{
+		Role: auth.RoleSuperAdmin,
+	})
+
+	store.On("ListTenants", ctx, ListTenantsParams{
+		Limit: 50, AllowedTenantIDs: nil,
+	}).Return([]domain.Tenant{testTenant()}, nil)
+
+	resp, err := svc.ListTenants(ctx, &pb.ListTenantsRequest{})
+	require.NoError(t, err)
+	assert.Len(t, resp.Tenants, 1)
+	store.AssertExpectations(t)
+}
+
+func TestListTenants_NonSuperadminFiltered(t *testing.T) {
+	store := &mockStore{}
+	svc := NewService(store, testLogger, nil, nil)
+
+	allowedIDs := []string{testTenantID}
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{
+		Role:      auth.RoleAdmin,
+		TenantIDs: allowedIDs,
+	})
+
+	// Store should receive AllowedTenantIDs — filtering happens at store level.
+	store.On("ListTenants", ctx, ListTenantsParams{
+		Limit: 50, AllowedTenantIDs: allowedIDs,
+	}).Return([]domain.Tenant{testTenant()}, nil)
+
+	resp, err := svc.ListTenants(ctx, &pb.ListTenantsRequest{})
+	require.NoError(t, err)
+	assert.Len(t, resp.Tenants, 1)
+	assert.Equal(t, testTenantID, resp.Tenants[0].Id)
+	store.AssertExpectations(t)
+}
+
+func TestListTenants_BySchemaFiltered(t *testing.T) {
+	store := &mockStore{}
+	svc := NewService(store, testLogger, nil, nil)
+
+	allowedIDs := []string{testTenantID}
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{
+		Role:      auth.RoleUser,
+		TenantIDs: allowedIDs,
+	})
+
+	schemaID := testSchemaID
+	store.On("ListTenantsBySchema", ctx, ListTenantsBySchemaParams{
+		SchemaID: schemaID, Limit: 50, AllowedTenantIDs: allowedIDs,
+	}).Return([]domain.Tenant{testTenant()}, nil)
+
+	resp, err := svc.ListTenants(ctx, &pb.ListTenantsRequest{SchemaId: &schemaID})
+	require.NoError(t, err)
+	assert.Len(t, resp.Tenants, 1)
+	store.AssertExpectations(t)
+}
+
+func TestListTenants_NoAuthContext_SeesAll(t *testing.T) {
+	store := &mockStore{}
+	svc := NewService(store, testLogger, nil, nil)
+	ctx := context.Background() // No auth claims — permissive.
+
+	store.On("ListTenants", ctx, ListTenantsParams{
+		Limit: 50, AllowedTenantIDs: nil,
+	}).Return([]domain.Tenant{testTenant()}, nil)
+
+	resp, err := svc.ListTenants(ctx, &pb.ListTenantsRequest{})
+	require.NoError(t, err)
+	assert.Len(t, resp.Tenants, 1)
 	store.AssertExpectations(t)
 }
 

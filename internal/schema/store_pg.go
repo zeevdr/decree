@@ -3,6 +3,7 @@ package schema
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/zeevdr/decree/internal/storage/dbstore"
@@ -233,6 +234,21 @@ func (s *PGStore) GetTenantByID(ctx context.Context, id string) (domain.Tenant, 
 }
 
 func (s *PGStore) ListTenants(ctx context.Context, arg ListTenantsParams) ([]domain.Tenant, error) {
+	if arg.AllowedTenantIDs != nil {
+		pgIDs, err := stringsToUUIDs(arg.AllowedTenantIDs)
+		if err != nil {
+			return nil, err
+		}
+		rows, err := s.read.ListTenantsByIDs(ctx, dbstore.ListTenantsByIDsParams{
+			Limit:      arg.Limit,
+			Offset:     arg.Offset,
+			AllowedIds: pgIDs,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return tenantsFromDB(rows), nil
+	}
 	rows, err := s.read.ListTenants(ctx, dbstore.ListTenantsParams{
 		Limit:  arg.Limit,
 		Offset: arg.Offset,
@@ -247,6 +263,22 @@ func (s *PGStore) ListTenantsBySchema(ctx context.Context, arg ListTenantsBySche
 	schemaID, err := pgconv.StringToUUID(arg.SchemaID)
 	if err != nil {
 		return nil, err
+	}
+	if arg.AllowedTenantIDs != nil {
+		pgIDs, err := stringsToUUIDs(arg.AllowedTenantIDs)
+		if err != nil {
+			return nil, err
+		}
+		rows, err := s.read.ListTenantsBySchemaAndIDs(ctx, dbstore.ListTenantsBySchemaAndIDsParams{
+			SchemaID:   schemaID,
+			Limit:      arg.Limit,
+			Offset:     arg.Offset,
+			AllowedIds: pgIDs,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return tenantsFromDB(rows), nil
 	}
 	rows, err := s.read.ListTenantsBySchema(ctx, dbstore.ListTenantsBySchemaParams{
 		SchemaID: schemaID,
@@ -408,4 +440,16 @@ func tenantsFromDB(rows []dbstore.Tenant) []domain.Tenant {
 		result[i] = tenantFromDB(r)
 	}
 	return result
+}
+
+func stringsToUUIDs(ids []string) ([]pgtype.UUID, error) {
+	result := make([]pgtype.UUID, len(ids))
+	for i, id := range ids {
+		u, err := pgconv.StringToUUID(id)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = u
+	}
+	return result, nil
 }
