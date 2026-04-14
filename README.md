@@ -110,6 +110,26 @@ console.log(fee.value); // always fresh
 
 Docs: [decree-typescript](https://github.com/zeevdr/decree-typescript)
 
+### Examples
+
+Runnable examples in [`examples/`](examples/) — each is a standalone Go module you can copy into your own project.
+
+| Example | What it shows |
+|---------|--------------|
+| [quickstart](examples/quickstart/) | Connect and read typed values |
+| [feature-flags](examples/feature-flags/) | Live feature toggles with configwatcher |
+| [live-config](examples/live-config/) | HTTP server with hot-reloadable config |
+| [multi-tenant](examples/multi-tenant/) | Same schema, different tenant values |
+| [optimistic-concurrency](examples/optimistic-concurrency/) | Safe concurrent updates with CAS |
+| [schema-lifecycle](examples/schema-lifecycle/) | Create, publish, and manage schemas |
+| [environment-bootstrap](examples/environment-bootstrap/) | Bootstrap from a single YAML file |
+| [config-validation](examples/config-validation/) | Offline validation (no server needed) |
+
+```bash
+cd examples && make setup   # start server + seed data
+cd quickstart && go run .   # run any example
+```
+
 ## CLI
 
 ```bash
