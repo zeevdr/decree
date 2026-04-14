@@ -1,3 +1,9 @@
+# CI pipeline for OpenDecree server, SDKs, and CLI.
+#
+# Jobs: tools → lint, test, docs, e2e, examples → check (alls-green gate)
+# The tools job builds/caches the Docker image used by lint, docs, e2e, examples.
+# The check job aggregates all results for branch protection.
+
 name: CI
 
 on:
@@ -20,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Compute Dockerfile hash
         id: hash
@@ -63,6 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Fetch main branch for buf breaking
@@ -71,7 +80,8 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Go lint
         uses: golangci/golangci-lint-action@v9
@@ -92,10 +102,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Build server + CLI
         run: |
@@ -123,10 +136,13 @@ jobs:
     needs: tools
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Pull tools image
         run: |
@@ -151,10 +167,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Pull tools image
         run: docker pull "${{ needs.tools.outputs.image }}" && docker tag "${{ needs.tools.outputs.image }}" decree-tools
@@ -190,10 +209,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Pull tools image
         run: docker pull "${{ needs.tools.outputs.image }}" && docker tag "${{ needs.tools.outputs.image }}" decree-tools
@@ -218,3 +240,13 @@ jobs:
         run: make examples
         env:
           TOOLS_IMAGE: ${{ needs.tools.outputs.image }}
+
+  check:
+    name: CI check
+    if: always()
+    needs: [lint, test, docs, e2e, examples]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
