@@ -103,3 +103,7 @@ Phase 1 complete: replaced 5 ASCII diagrams with Mermaid. Phase 2 skipped (not n
 ## Cache Overflow Fix (#107)
 
 MemoryCache: bounded to 10k entries, evicts expired first then oldest, background sweep. ValidatorCache: bounded to 1k tenants, evicts oldest. Redis: docker-compose maxmemory 128mb + allkeys-lru.
+
+## SDK Examples — Go (#120)
+
+8 runnable examples in `examples/`: quickstart, feature-flags, live-config, multi-tenant, optimistic-concurrency, schema-lifecycle, environment-bootstrap, config-validation. Each is a standalone Go module with main.go, test, and README. Shared seed YAML + setup program. `make examples` runs full lifecycle in Docker. Tests use `//go:build example` tag. Part of "SDK Examples" milestone (#121 Python, #122 TypeScript, #123 decree-demos remain).
