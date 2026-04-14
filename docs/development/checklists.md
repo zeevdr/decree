@@ -1,6 +1,6 @@
 # Checklists
 
-Standard checklists for Claude to follow at each stage of the development workflow.
+Standard development workflow checklists.
 
 ---
 

@@ -83,8 +83,9 @@ Single Go binary, three gRPC services (SchemaService, ConfigService, AuditServic
 ## Project Management
 
 - **Milestones** on GitHub track efforts (e.g. "Admin GUI", "Security Review")
-- **`.agents/context/`** holds design context for AI agents: architecture decisions, threat models, design notes, completed effort archive
-- **`.agents/checklists.md`** has standard dev workflow checklists (commit, PR, release)
+- **`.agents/context/`** holds design context for AI agents: completed effort archive, active design briefs
+- **`docs/development/checklists.md`** has standard dev workflow checklists (commit, PR, release)
+- **`docs/development/threat-model.md`** has the security threat model
 - **GitHub Issues** are the single source of truth for tasks — no separate effort tracking files
 
 ## Conventions
