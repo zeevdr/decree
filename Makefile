@@ -6,7 +6,7 @@ DOCKER_RUN_TOOLS := docker run --rm -u $(shell id -u):$(shell id -g) -e HOME=/tm
 MKDOCS_IMAGE := $(MKDOCS_IMAGE):9.7.6
 GOLANGCI_LINT_VERSION := v2.8.0
 
-.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e examples bench bench-e2e docs docs-api docs-cli docs-serve docs-deploy clean tools help
+.PHONY: all generate generate-proto generate-sqlc test lint build image migrate e2e examples bench bench-e2e docs docs-api docs-cli docs-serve docs-deploy pre-commit clean tools help
 
 all: generate lint test build
 
@@ -117,6 +117,33 @@ docs-serve:
 ## docs-deploy: Deploy docs to GitHub Pages
 docs-deploy:
 	docker run --rm -v $(CURDIR):/docs $(MKDOCS_IMAGE) gh-deploy --force
+
+## pre-commit: Run all before-commit checks (build, vet, format, lint, test, coverage)
+SDK_MODULES := sdk/configclient sdk/adminclient sdk/configwatcher sdk/tools
+ALL_MODULES := . $(SDK_MODULES) cmd/decree
+
+pre-commit:
+	@echo "=== Build ==="
+	go build ./...
+	@for mod in $(SDK_MODULES) cmd/decree; do (cd $$mod && go build ./...) || exit 1; done
+	@echo "=== Vet ==="
+	go vet ./...
+	@for mod in $(SDK_MODULES) cmd/decree; do (cd $$mod && go vet ./...) || exit 1; done
+	@echo "=== Format ==="
+	@unformatted=$$(gofumpt -l .); \
+	if [ -n "$$unformatted" ]; then \
+		echo "Unformatted files:"; echo "$$unformatted"; \
+		echo "Run: gofumpt -w . sdk/ cmd/"; exit 1; \
+	fi
+	@echo "=== Lint ==="
+	golangci-lint run ./...
+	@echo "=== Test ==="
+	go test ./... -race -count=1
+	@for mod in $(SDK_MODULES) cmd/decree; do (cd $$mod && go test ./... -race -count=1) || exit 1; done
+	@echo "=== Coverage ==="
+	./scripts/check-coverage.sh
+	@echo ""
+	@echo "✓ All pre-commit checks passed"
 
 ## clean: Remove build artifacts and generated code
 clean:
