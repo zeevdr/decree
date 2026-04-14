@@ -1,3 +1,7 @@
+> **This project has moved to [opendecree/decree](https://github.com/opendecree/decree).** This repository is archived and read-only.
+
+---
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/zeevdr/decree/main/assets/logo.png" alt="OpenDecree" width="150">
 </p>
@@ -231,21 +235,29 @@ decree config get-all <tenant-id>
 flowchart LR
     subgraph Clients
         direction TB
-        SDKs["🔧 SDKs\nGo · Python · TypeScript"]
-        CLI[">_ CLI\ndecree"]
-        UI["🖥️ Admin UI\ndecree-ui"]
-        Direct["🔗 Direct\ncurl, custom"]
+        SDKs["🔧 SDKs
+Go · Python · TypeScript"]
+        CLI[">_ CLI
+decree"]
+        UI["🖥️ Admin UI
+decree-ui"]
+        Direct["🔗 Direct
+curl, custom"]
     end
 
     SDKs & CLI -->|gRPC| GW
     UI & Direct -->|REST| GW
 
-    GW{{"🔐 Gateway\nauth · routing"}}
+    GW{{"🔐 Gateway
+auth · routing"}}
 
     subgraph Server["⚙️ OpenDecree"]
-        SS["📋 SchemaService\nschemas, tenants"]
-        CS["📝 ConfigService\nread, write, subscribe"]
-        AS["📊 AuditService\nhistory, usage"]
+        SS["📋 SchemaService
+schemas, tenants"]
+        CS["📝 ConfigService
+read, write, subscribe"]
+        AS["📊 AuditService
+history, usage"]
     end
 
     GW --> SS & CS & AS
