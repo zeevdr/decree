@@ -106,4 +106,24 @@ MemoryCache: bounded to 10k entries, evicts expired first then oldest, backgroun
 
 ## SDK Examples — Go (#120)
 
-8 runnable examples in `examples/`: quickstart, feature-flags, live-config, multi-tenant, optimistic-concurrency, schema-lifecycle, environment-bootstrap, config-validation. Each is a standalone Go module with main.go, test, and README. Shared seed YAML + setup program. `make examples` runs full lifecycle in Docker. Tests use `//go:build example` tag. Part of "SDK Examples" milestone (#121 Python, #122 TypeScript, #123 decree-demos remain).
+8 runnable examples in `examples/`: quickstart, feature-flags, live-config, multi-tenant, optimistic-concurrency, schema-lifecycle, environment-bootstrap, config-validation. Each is a standalone Go module with main.go, test, and README. Shared seed YAML + setup program. `make examples` runs full lifecycle in Docker. Tests use `//go:build example` tag.
+
+## SDK Examples — Python (#121)
+
+5 examples in decree-python `examples/`: quickstart (sync context manager, typed get), async-client (AsyncConfigClient, asyncio.gather), live-config (ConfigWatcher, @on_change decorator, changes() iterator), fastapi-integration (AsyncConfigWatcher as lifespan dependency), error-handling (RetryConfig, nullable, error hierarchy). Shared seed YAML + setup script. CI job compile-checks examples against installed SDK.
+
+## SDK Examples — TypeScript (#122)
+
+4 examples in decree-typescript `examples/`: quickstart (type converters Number/Boolean, try/finally), live-config (ConfigWatcher, EventEmitter .on('change'), for await...of), nextjs-integration (singleton watcher pattern for server-side config), error-handling (RetryConfig, nullable, instanceof narrowing). Shared tsconfig + package.json. CI job typechecks examples.
+
+SDK Examples milestone: 3/4 complete (#123 decree-demos remains).
+
+## Docs Restructure + Skills
+
+Moved general developer docs out of `.agents/` to standard locations: checklists → `docs/development/checklists.md`, threat model → `docs/development/threat-model.md`. `.agents/` now holds only AI-specific context (completed.md, active design briefs). Added `.agents/README.md`.
+
+New Claude Code skills: `/before-pr` (PR checklist), `/merge` (merge + cleanup), `/issues` (project-wide issue list by size), `/issue` (create with labels/repo routing). Updated existing skills for multi-repo project.
+
+## Cross-Repo Alignment
+
+Labels aligned across decree, decree-python, decree-typescript, decree-ui (14 common labels, size S/M/L with descriptions). `admin-gui` label renamed to `decree-ui`. Project auto-add workflow (`project.yml`) added to all 4 repos — new issues/PRs auto-appear on OpenDecree Roadmap board. Admin GUI issues #131, #128, #126 moved from decree to decree-ui. CI improvement issues created (12 total: hardening, performance, readability × 4 repos).
